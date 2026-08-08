@@ -2,7 +2,7 @@ nexterUI, a GPL-licensed fork of NextUI (formerly MinUI Next), a custom OS based
 with screen sync fixes and many many more features!
 
 Source:
-https://github.com/lepht/NextUI
+https://github.com/lepht/nexterUI
 
 ----------------------------------------
 Installing

@@ -7,7 +7,7 @@
 <hr>
 
 <h4 align="center">
-  <a href="https://github.com/lepht/NextUI/issues" target="_blank">Issues</a>
+  <a href="https://github.com/lepht/nexterUI/issues" target="_blank">Issues</a>
   ·
   <a href="https://nextui.loveretro.games/usage/#getting-started" target="_blank">Installation (upstream docs)</a>
   ·
@@ -15,14 +15,14 @@
 </h4>
 
 <div align="center"><p>
-    <a href="https://github.com/lepht/NextUI/pulse">
-      <img alt="Last commit" src="https://img.shields.io/github/last-commit/lepht/NextUI?style=for-the-badge&logo=starship&color=8bd5ca&logoColor=D9E0EE&labelColor=302D41"/>
+    <a href="https://github.com/lepht/nexterUI/pulse">
+      <img alt="Last commit" src="https://img.shields.io/github/last-commit/lepht/nexterUI?style=for-the-badge&logo=starship&color=8bd5ca&logoColor=D9E0EE&labelColor=302D41"/>
     </a>
-    <a href="https://github.com/lepht/NextUI/blob/main/LICENSE">
-      <img alt="License" src="https://img.shields.io/github/license/lepht/NextUI?style=for-the-badge&logo=starship&color=ee999f&logoColor=D9E0EE&labelColor=302D41" />
+    <a href="https://github.com/lepht/nexterUI/blob/main/LICENSE">
+      <img alt="License" src="https://img.shields.io/github/license/lepht/nexterUI?style=for-the-badge&logo=starship&color=ee999f&logoColor=D9E0EE&labelColor=302D41" />
     </a>
-    <a href="https://github.com/lepht/NextUI/issues">
-      <img alt="Issues" src="https://img.shields.io/github/issues/lepht/NextUI?style=for-the-badge&logo=bilibili&color=F5E0DC&logoColor=D9E0EE&labelColor=302D41" />
+    <a href="https://github.com/lepht/nexterUI/issues">
+      <img alt="Issues" src="https://img.shields.io/github/issues/lepht/nexterUI?style=for-the-badge&logo=bilibili&color=F5E0DC&logoColor=D9E0EE&labelColor=302D41" />
     </a>
 </div>
 
