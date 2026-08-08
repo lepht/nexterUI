@@ -256,6 +256,36 @@ void folderPath(const char *path, char *result) {
         strcpy(result, "");  // No folder found
     }
 }
+// A multi-disc game is its folder when you browse to it but its m3u or cue when
+// it comes back out of recents. Both have to reduce to the same key, or the same
+// game lands in a list twice under two names. Only the folder's own auto-launch
+// file collapses - <dir>/<dir>.m3u - so a loose disc keeps its own path.
+//
+// Returns false when `path` will not fit, rather than quietly keying off a
+// truncated one; `out_path` is always left NUL terminated either way.
+bool canonicalGamePath(const char *path, char *out_path, size_t out_size) {
+	if (snprintf(out_path, out_size, "%s", path) >= (int)out_size) return false;
+
+	int is_m3u = suffixMatch(".m3u", out_path);
+	if (!is_m3u && !suffixMatch(".cue", out_path)) return true; // not a disc file, keep it as is
+
+	char parent[MAX_PATH];
+	if (snprintf(parent, sizeof(parent), "%s", out_path) >= (int)sizeof(parent)) return false;
+
+	char *tmp = strrchr(parent, '/');
+	if (!tmp) return true;
+	tmp[0] = '\0';
+
+	char *dir_name = strrchr(parent, '/'); // keeps the leading slash
+	if (!dir_name) return true;
+
+	char auto_path[MAX_PATH];
+	if (snprintf(auto_path, sizeof(auto_path), "%s%s%s", parent, dir_name,
+			is_m3u ? ".m3u" : ".cue") >= (int)sizeof(auto_path)) return false;
+
+	if (exactMatch(auto_path, path)) snprintf(out_path, out_size, "%s", parent);
+	return true;
+}
 void cleanName(char *name_out, const char *file_name)
 {
     char *name_without_ext = removeExtension(file_name);

@@ -65,6 +65,7 @@ For other devices we recommend checking out [MinUI](https://github.com/shauninma
 - Deep Sleep mode, gives instant ON and avoids the overheat bug on the Brick by [@zhaofengli](https://github.com/zhaofengli)
 - Battery Monitoring including history graph and time left prediction
 - Scrolling animated titles for longer game names
+- Favorites, added and removed from a context menu (Y) on any listed game
 - Updated and optimized build emulation cores
 - Rumble strength fixed and is now variable as used by the games
 - FBNeo Arcade screen rotation

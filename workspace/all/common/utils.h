@@ -23,6 +23,10 @@ int countChar(const char *str, char ch);
 char *removeExtension(const char *myStr);
 const char *baseName(const char *filename);
 void folderPath(const char *filePath, char *folder_path);
+// Collapses <dir>/<dir>.m3u (or .cue) to <dir>, so a multi-disc game keys the
+// same whether it came from the browser or out of recents. False if it did not
+// fit, so a caller cannot key off a truncated path.
+bool canonicalGamePath(const char *path, char *out_path, size_t out_size);
 void cleanName(char *name_out, const char *file_name);
 bool pathRelativeTo(char *path_out, const char *dir_from, const char *file_to);
 
