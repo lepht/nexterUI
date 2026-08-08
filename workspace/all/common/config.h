@@ -50,9 +50,10 @@ enum {
 	SCREEN_GAMELIST,
 	SCREEN_GAMESWITCHER,
 	SCREEN_QUICKMENU,
-	// a view that is only reachable from another screen, never a default view
+	// views that are only reachable from another screen, never a default view
 	// (keep after the ones above, defaultView persists these as plain ints)
 	SCREEN_CONTEXTMENU,
+	SCREEN_SEARCH,
 	// meta
 	SCREEN_GAME,
 	SCREEN_OFF
