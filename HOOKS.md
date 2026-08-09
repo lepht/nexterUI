@@ -1,4 +1,4 @@
-# NextUI hooks
+# nexterUI hooks
 
 Hooks are the only mechanism that runs pak-supplied code *outside* of a pak launch. A hook is a shell script the OS executes at a fixed point in its lifecycle — at boot, around every ROM and pak launch, and around suspend and resume.
 
@@ -48,7 +48,7 @@ Two things worth planning around:
 
 ## Environment variables
 
-Hook scripts inherit all standard NextUI environment variables (`SDCARD_PATH`, `PLATFORM`, `USERDATA_PATH`, `SHARED_USERDATA_PATH`, `LOGS_PATH`, …). See the environment table in [PAKS.md](PAKS.md#environment).
+Hook scripts inherit all standard nexterUI environment variables (`SDCARD_PATH`, `PLATFORM`, `USERDATA_PATH`, `SHARED_USERDATA_PATH`, `LOGS_PATH`, …). See the environment table in [PAKS.md](PAKS.md#environment).
 
 `run_hooks.sh` additionally exports:
 
@@ -115,7 +115,7 @@ Two consequences that are easy to get wrong:
 
 ## Installing and removing hooks
 
-Hooks live in `.userdata/`, outside your pak. This has a consequence worth designing for: **`.userdata/` survives both NextUI updates and pak deletion.** A hook you install keeps running after the user deletes the pak that installed it, and nothing runs on uninstall to clean it up.
+Hooks live in `.userdata/`, outside your pak. This has a consequence worth designing for: **`.userdata/` survives both nexterUI updates and pak deletion.** A hook you install keeps running after the user deletes the pak that installed it, and nothing runs on uninstall to clean it up.
 
 So:
 
@@ -185,7 +185,7 @@ To verify a hook fires at all, have it touch a file and check the timestamp:
 date >> "$LOGS_PATH/myhook-fired.txt"
 ```
 
-You can also run the phase by hand from a shell with the NextUI environment loaded:
+You can also run the phase by hand from a shell with the nexterUI environment loaded:
 
 ```sh
 "$SYSTEM_PATH/bin/run_hooks.sh" post-launch.d

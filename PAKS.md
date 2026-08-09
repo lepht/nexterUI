@@ -1,6 +1,6 @@
-# NextUI paks
+# nexterUI paks
 
-A pak is a folder with a `.pak` extension containing a shell script named `launch.sh`. That is the entire contract. NextUI launches the script; everything else is up to you.
+A pak is a folder with a `.pak` extension containing a shell script named `launch.sh`. That is the entire contract. nexterUI launches the script; everything else is up to you.
 
 There are two kinds:
 
@@ -10,6 +10,8 @@ There are two kinds:
 | **Tool pak** | `/Tools/<platform>/` | Anything else. Appears in the Tools menu, launched directly. |
 
 Both are just folders with a `launch.sh`. The only thing that makes one an emulator and the other a tool is which directory it sits in.
+
+> **Compatibility.** nexterUI is a fork of [NextUI](https://github.com/LoveRetro/NextUI) and keeps the pak format unchanged. Paks built for NextUI work here as-is, and everything in this document applies to both.
 
 **Contents**
 
@@ -48,11 +50,11 @@ Both are just folders with a `launch.sh`. The only thing that makes one an emula
     │   ├── logs/
     │   └── auto.sh                     legacy boot script
     └── shared/
-        ├── minuisettings.txt           all NextUI settings
+        ├── minuisettings.txt           all nexterUI settings
         └── .minui/                     recents, resume state
 ```
 
-Never install a pak into `.system/`. That directory is deleted and recreated by every NextUI update.
+Never install a pak into `.system/`. That directory is deleted and recreated by every nexterUI update.
 
 ### Platform folders
 
@@ -79,7 +81,7 @@ esac
 
 This is the single most important thing to understand, and it explains nearly every limitation further down.
 
-**NextUI's launcher exits before your pak starts.**
+**nexterUI's launcher exits before your pak starts.**
 
 The real init process is the shell loop in `.system/<platform>/paks/MinUI.pak/launch.sh`:
 
@@ -149,16 +151,16 @@ Daemons started at boot survive across pak launches:
 | `LOGS_PATH` | `$USERDATA_PATH/logs` | |
 | `HOOKS_PATH` | `$USERDATA_PATH/.hooks` | see [HOOKS.md](HOOKS.md) |
 | `DATETIME_PATH` | `$SHARED_USERDATA_PATH/datetime.txt` | |
-| `IS_NEXT` | `yes` | present on NextUI, absent on stock MinUI |
+| `IS_NEXT` | `yes` | set on nexterUI and NextUI, absent on stock MinUI |
 | `TRIMUI_MODEL` | e.g. `Trimui Brick` | Trimui platforms only |
 
 `HOME` is set to `$USERDATA_PATH` on device platforms. It is **not** exported on `desktop`, so set it yourself if your pak depends on it.
 
-Use `IS_NEXT` to detect NextUI when writing a pak that also targets stock MinUI:
+Use `IS_NEXT` to detect nexterUI or NextUI when writing a pak that also targets stock MinUI. Nothing in the environment distinguishes the fork from upstream — both set it:
 
 ```sh
 if [ "$IS_NEXT" = "yes" ]; then
-    # NextUI-only features
+    # not available on stock MinUI
 fi
 ```
 
@@ -222,7 +224,7 @@ A `map.txt` in a listed directory renames entries for display. One `filename<TAB
 
 ### Tags and matching
 
-NextUI maps a ROM to a pak using the tag in parentheses at the end of its parent folder name:
+nexterUI maps a ROM to a pak using the tag in parentheses at the end of its parent folder name:
 
 ```
 /Roms/Game Boy (GB)/Tetris.gb   →   GB.pak
@@ -239,7 +241,7 @@ Resolution order when launching, from `getEmuPath()`:
 
 ### The three types
 
-**1. Reuse a bundled core.** Known-good core, your own defaults and separate configs. Full NextUI integration. `GG.pak` in the extras bundle does this with the stock picodrive core.
+**1. Reuse a bundled core.** Known-good core, your own defaults and separate configs. Full nexterUI integration. `GG.pak` in the extras bundle does this with the stock picodrive core.
 
 **2. Bundle your own core.** Supports new systems, keeps full integration — resume from menu, quicksave, auto-resume, consistent in-game menus and options. Add one line to point at your own core directory:
 
@@ -299,7 +301,7 @@ Everything between `bind ` and `=` is the label shown in the Controls menu — n
 
 ### Brightness and volume
 
-Some binaries reset brightness or volume on launch (DinguxCommander, ppssppSDL). `syncsettings.elf` waits one second and restores NextUI's current values. Usually launching it as a daemon first is enough:
+Some binaries reset brightness or volume on launch (DinguxCommander, ppssppSDL). `syncsettings.elf` waits one second and restores nexterUI's current values. Usually launching it as a daemon first is enough:
 
 ```sh
 syncsettings.elf &
@@ -327,10 +329,10 @@ All on `PATH`:
 
 | Binary | Purpose |
 |---|---|
-| `minarch.elf` | the libretro frontend — full NextUI game integration |
+| `minarch.elf` | the libretro frontend — full nexterUI game integration |
 | `show2.elf` | splash / progress UI. Simple, progress, and daemon modes; daemon mode accepts live updates over `/tmp/show2.fifo`. See `workspace/all/show2/README.md` |
-| `syncsettings.elf` | restore NextUI brightness and volume |
-| `nextval.elf` | read any NextUI setting as JSON — `nextval.elf wifi` → `{"wifi": 1}`; no args prints everything |
+| `syncsettings.elf` | restore nexterUI brightness and volume |
+| `nextval.elf` | read any nexterUI setting as JSON — `nextval.elf wifi` → `{"wifi": 1}`; no args prints everything |
 | `gametimectl.elf` | game time tracking |
 | `governor.sh` | set the CPU governor (`auto`, `performance`) |
 | `run_hooks.sh` | run a hook directory; see [HOOKS.md](HOOKS.md) |
@@ -346,7 +348,7 @@ killall show2.elf
 
 ### Reading and writing settings
 
-Every NextUI setting lives in one flat file, `$SHARED_USERDATA_PATH/minuisettings.txt`, as `key=value` lines. Read individual values with `nextval.elf`:
+Every nexterUI setting lives in one flat file, `$SHARED_USERDATA_PATH/minuisettings.txt`, as `key=value` lines. Read individual values with `nextval.elf`:
 
 ```sh
 wifion=$(nextval.elf wifi | sed -n 's/.*"wifi": \([0-9]*\).*/\1/p')
@@ -407,7 +409,7 @@ If a feature needs to live *inside* the menu — a context menu on a listed game
 
 **Update behavior:** this asymmetry causes most pak lifecycle bugs.
 
-| Path | On NextUI update |
+| Path | On nexterUI update |
 |---|---|
 | `.system/` | **deleted and replaced** |
 | `/Emus/`, `/Tools/` | untouched |
@@ -456,8 +458,8 @@ For iteration without hardware, the `desktop` platform builds and runs the same 
 
 ## Caveats
 
-- NextUI only supports the **RGB565** pixel format and does not implement the OpenGL libretro APIs. Cores requiring either will not work under `minarch.elf`. Using the stock firmware's retroarch instead is possible but unsupported.
-- Third-party paks are not supported by the NextUI project. When a console or core is absent from the base or extras bundles it is usually deliberate — poor integration, unreliable save states, weak performance on the target hardware, or arcane ROM set requirements. Make this clear to your users.
+- nexterUI only supports the **RGB565** pixel format and does not implement the OpenGL libretro APIs. Cores requiring either will not work under `minarch.elf`. Using the stock firmware's retroarch instead is possible but unsupported.
+- Third-party paks are not supported by the nexterUI project, and neither upstream NextUI nor MinUI supports them either. When a console or core is absent from the base or extras bundles that is usually deliberate — poor integration, unreliable save states, weak performance on the target hardware, or arcane ROM set requirements. Make this clear to your users.
 - Paths in the launcher are largely fixed-size `char[256]` buffers. Deeply nested directories and very long names can be truncated.
 - `$SDCARD_PATH` is FAT32: case-insensitive, no symlinks, no executable permission bit. Scripts run via their shebang regardless of mode bits.
 
