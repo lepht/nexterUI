@@ -54,6 +54,16 @@ fbneo_BUILD_PATH = fbneo/src/burner/libretro
 fbneo_MAKE = make
 fbneo_HASH = 6a5cc250c2db8d874a06ee86e302a2a78918b4c1
 
+# libretro/mgba removed Makefile.libretro in 8940477 (2026-08-04) when its CI moved
+# to cmake, which broke patches/mgba.patch and with it every build. Pin to the last
+# commit that still has the makefile until the patch is ported to cmake.
+mgba_HASH = 925f0f0bc1f51c79ca5446d7427512c653e615b3
+
+# libretro-fceumm's Makefile.libretro drifted in 8ed0cb2 (2026-07-23, "Replace bundled
+# zlib with libretro-common's clean-room DEFLATE codec") and patches/fceumm.patch no
+# longer applies against it. Pin to the last commit it does apply to.
+fceumm_HASH = becde7dc48ad590e9c63ac9637dbaa01552beba3
+
 mednafen_pce_fast_REPO = https://github.com/libretro/beetle-pce-fast-libretro
 mednafen_vb_REPO = https://github.com/libretro/beetle-vb-libretro
 

@@ -59,7 +59,9 @@ jobs:
     env:
       PLATFORM: ${{ matrix.toolchain }}
     strategy:
-      fail-fast: true
+      # one broken core should not cancel the other 40-odd jobs and hide whether
+      # anything else is also broken - see the mgba/fceumm patch rot
+      fail-fast: false
       matrix:
         toolchain:
           - tg5040
