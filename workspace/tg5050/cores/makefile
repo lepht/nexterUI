@@ -64,6 +64,35 @@ mgba_HASH = 925f0f0bc1f51c79ca5446d7427512c653e615b3
 # longer applies against it. Pin to the last commit it does apply to.
 fceumm_HASH = becde7dc48ad590e9c63ac9637dbaa01552beba3
 
+# Every core below is pinned to the upstream commit it was verified against, so a
+# build is reproducible and a third-party repo cannot break CI without a commit
+# here. See #16. Verified by fetching each commit and running `git apply --check`
+# with both the tg5040 and tg5050 patches. Bump deliberately, ideally per release.
+a2600_HASH = 4a7da82595d27b8df7af1ecb467a64b642a41bc9
+a5200_HASH = 40c6f2f1ad4a3145b328d5baaf010fae6c7e752b
+a7800_HASH = 363b6dfbd3e240762e022c2b4897b4fe55722be3
+bluemsx_HASH = 0f32f52c48d3e772bfdf0379756f81f00b4e08bc
+c128_HASH = c8c242db75a559246d6d51017e6dd4ecd75d6a9f
+c64_HASH = c8c242db75a559246d6d51017e6dd4ecd75d6a9f
+fake-08_HASH = 814991a2571ad3970e386cef48f3b148aa1c27b9
+gambatte_HASH = 96174369b3c30d9fc57c926fa3379c273dc6a9a5
+gearcoleco_HASH = 8916216764ca8a7965be5f4b4d093a437a1749a6
+gpsp_HASH = 5b6e751f4abf368509146cd143c949c1946ac1ae
+handy_HASH = bc55d462f0b2d6b073ea93dc552ebd73cec60fd1
+libretro-cap32_HASH = 4abfb8be233bec630f369379fb6c1d92d31f1c7d
+libretro-uae_HASH = 96ebfcfc2c66233ad37f6dc99ee991211dc719ad
+mednafen_pce_fast_HASH = b211204c7026dff6e86e79b00185512e2421fff8
+mednafen_supafaust_HASH = d6187e5337e6c2646d003db3ab1936727ca75301
+mednafen_vb_HASH = 3f53a40bf8aa18777514fd4b220960427e312a3f
+pcsx_rearmed_HASH = da2cb8ecd17fd0932ab6d94774c0522beebce6e3
+pet_HASH = c8c242db75a559246d6d51017e6dd4ecd75d6a9f
+plus4_HASH = c8c242db75a559246d6d51017e6dd4ecd75d6a9f
+prboom_HASH = c180d47a5f9f1b5f74be18bf74deb5eccf97057e
+race_HASH = c7810dd7f172827bfa2004813bc000b13786636b
+snes9x_HASH = 97c65a34a2eb8592de6c7b44a0ad681895684a41
+snes9x2005_plus_HASH = deb49d80d1836e3e737480a326e31a54c46c04ae
+vic_HASH = c8c242db75a559246d6d51017e6dd4ecd75d6a9f
+
 mednafen_pce_fast_REPO = https://github.com/libretro/beetle-pce-fast-libretro
 mednafen_vb_REPO = https://github.com/libretro/beetle-vb-libretro
 
