@@ -438,6 +438,33 @@ void putFile(char* path, char* contents) {
 		fclose(file);
 	}
 }
+
+// Rewriting a file in place truncates it the moment it is opened, so losing power
+// midway - which on a handheld means any time the user flips the switch - leaves a
+// half-written file behind. These two write to a sibling temp file and rename that
+// over the target instead, so a reader only ever sees the whole old file or the
+// whole new one. Worth using for anything on the card the user would miss.
+FILE* openAtomic(const char* path, char* tmp_path, size_t tmp_size) {
+	if (snprintf(tmp_path, tmp_size, "%s.tmp", path) >= (int)tmp_size) return NULL;
+
+	FILE* file = fopen(tmp_path, "w");
+	if (!file) tmp_path[0] = '\0';
+	return file;
+}
+int commitAtomic(FILE* file, const char* path, const char* tmp_path) {
+	if (!file) return -1;
+
+	// flush all the way down to the card before renaming, otherwise the rename can
+	// land while the contents are still only in the page cache
+	int ok = fflush(file)==0 && fsync(fileno(file))==0;
+	if (fclose(file)!=0) ok = 0;
+
+	if (ok && rename(tmp_path, path)==0) return 0;
+
+	unlink(tmp_path);
+	return -1;
+}
+
 void getFile(char* path, char* buffer, size_t buffer_size) {
 	FILE *file = fopen(path, "r");
 	if (file) {

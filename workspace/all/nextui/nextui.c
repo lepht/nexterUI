@@ -478,7 +478,8 @@ static int startgame = 0;
 
 #define MAX_RECENTS 24 // a multiple of all menu rows
 static void saveRecents(void) {
-	FILE* file = fopen(RECENT_PATH, "w");
+	char tmp_path[MAX_PATH];
+	FILE* file = openAtomic(RECENT_PATH, tmp_path, sizeof(tmp_path));
 	if (file) {
 		for (int i=0; i<recents->count; i++) {
 			Recent* recent = recents->items[i];
@@ -489,7 +490,7 @@ static void saveRecents(void) {
 			}
 			putc('\n', file);
 		}
-		fclose(file);
+		commitAtomic(file, RECENT_PATH, tmp_path);
 	}
 }
 static void addRecent(char* path, char* alias) {
