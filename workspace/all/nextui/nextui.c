@@ -2569,6 +2569,56 @@ static void applyContextAction(void) {
 }
 
 ///////////////////////////////////////
+// Benchmarking. Costs nothing unless switched on, and prints one key=value line
+// per measured operation so a script can diff two runs without parsing prose.
+//
+// Turn it on with NEXTUI_BENCH=1, or by creating BENCH_PATH on the card - the
+// file matters because a device has no convenient way to set an env var for
+// nextui.elf, which the launcher respawns in a loop.
+
+#include <time.h>
+
+// Heap figures come from mallinfo, which is glibc's. The header has to sit
+// inside this guard too, not just the calls: macOS has no <malloc.h> at all,
+// so an unconditional include fails before any of it is reached. Devices are
+// glibc, so the numbers are there where they matter; elsewhere they read zero.
+#if defined(__GLIBC__)
+#include <malloc.h>
+#if defined(__GLIBC_PREREQ) && __GLIBC_PREREQ(2,33)
+#define BENCH_HEAP_USED() ((size_t)mallinfo2().uordblks)
+#else
+// mallinfo() is deprecated and its fields are int, but the index is megabytes,
+// nowhere near the 2GB where that would wrap
+#define BENCH_HEAP_USED() ((size_t)mallinfo().uordblks)
+#endif
+#else
+#define BENCH_HEAP_USED() ((size_t)0)
+#endif
+
+enum {
+	BENCH_OFF = 0,
+	BENCH_LOG,  // measure the normal flow, user drives it
+	BENCH_AUTO, // measure, print, exit - desktop harness only
+};
+static int bench_mode = BENCH_OFF;
+
+static void Bench_init(void) {
+	char* env = getenv("NEXTUI_BENCH");
+
+	// auto mode ends the process as soon as it has its numbers. On a device the
+	// launcher would just respawn us forever, so it is desktop only.
+	if (env && exactMatch(env, "run") && exactMatch(PLATFORM, "desktop")) bench_mode = BENCH_AUTO;
+	else if ((env && exactMatch(env, "1")) || exists(BENCH_PATH)) bench_mode = BENCH_LOG;
+
+	if (bench_mode) LOG_info("BENCH on mode=%s\n", bench_mode==BENCH_AUTO ? "auto" : "log");
+}
+static double benchNow(void) {
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	return ts.tv_sec*1000.0 + ts.tv_nsec/1000000.0;
+}
+
+///////////////////////////////////////
 
 #define SEARCH_QUERY_MAX 32
 // An indexed entry measures about 200 bytes of heap (struct, path, display name),
@@ -2678,6 +2728,8 @@ static void addSearchEntries(Array* entries, char* path, int depth) {
 // Built once per launch, on the first visit to the search screen.
 static void buildSearchIndex(void) {
 	if (search_index) return;
+	double bench_t0 = bench_mode ? benchNow() : 0;
+	size_t bench_heap0 = bench_mode ? BENCH_HEAP_USED() : 0;
 
 	search_index = Array_new();
 	search_truncated = 0;
@@ -2705,7 +2757,9 @@ static void buildSearchIndex(void) {
 	if (search_truncated)
 		LOG_info("search index hit its %i entry ceiling, results will be partial\n", SEARCH_INDEX_MAX);
 
+	double bench_t1 = bench_mode ? benchNow() : 0;
 	EntryArray_sort(search_index);
+	double bench_t2 = bench_mode ? benchNow() : 0;
 
 	// the same game routinely exists under two systems, so tag collisions with
 	// the emulator they belong to, exactly like a directory listing does
@@ -2723,9 +2777,19 @@ static void buildSearchIndex(void) {
 		}
 		prior = entry;
 	}
+
+	if (bench_mode) {
+		double t3 = benchNow();
+		size_t heap = BENCH_HEAP_USED() - bench_heap0;
+		LOG_info("BENCH search.index entries=%i truncated=%i walk_ms=%.2f sort_ms=%.2f dedupe_ms=%.2f total_ms=%.2f heap_bytes=%zu heap_per_entry=%.1f\n",
+			search_index->count, search_truncated,
+			bench_t1-bench_t0, bench_t2-bench_t1, t3-bench_t2, t3-bench_t0,
+			heap, search_index->count ? (double)heap/search_index->count : 0.0);
+	}
 }
 
 static void updateSearchResults(void) {
+	double bench_t0 = bench_mode ? benchNow() : 0;
 	if (!search_results) search_results = Array_new();
 	search_results->count = 0; // entries belong to search_index, nothing to free
 
@@ -2734,6 +2798,13 @@ static void updateSearchResults(void) {
 			Entry* entry = search_index->items[i];
 			if (containsString(entry->name, search_query)) Array_push(search_results, entry);
 		}
+	}
+
+	if (bench_mode && search_query[0]) {
+		LOG_info("BENCH search.filter query=%s query_len=%i entries=%i hits=%i ms=%.3f\n",
+			search_query, (int)strlen(search_query),
+			search_index ? search_index->count : 0, search_results->count,
+			benchNow()-bench_t0);
 	}
 
 	// the result set changed out from under it, so the old position means nothing
@@ -2814,6 +2885,24 @@ static void Search_quit(void) {
 	search_results = NULL;
 	search_index = NULL;
 	search_truncated = 0;
+}
+
+// Auto mode: build the index and run a fixed set of queries chosen to span the
+// selectivity range - a query matching most of the library costs more than one
+// matching none, because every hit is an Array_push. Each is repeated so a
+// harness can take the minimum, which is the sample least polluted by whatever
+// else the machine was doing.
+static void Bench_run(void) {
+	static char* queries[] = { "a", "e", "the", "zel", "mario", "qqzzx", NULL };
+
+	buildSearchIndex();
+	for (int i=0; queries[i]; i++) {
+		for (int pass=0; pass<5; pass++) {
+			snprintf(search_query, sizeof(search_query), "%s", queries[i]);
+			updateSearchResults();
+		}
+	}
+	search_query[0] = '\0';
 }
 
 ///////////////////////////////////////
@@ -3035,7 +3124,20 @@ int main (int argc, char *argv[]) {
 
 	// start my threaded image loader :D
 	initImageLoaderPool();
+	Bench_init(); // before anything it might measure
 	Menu_init();
+
+	if (bench_mode==BENCH_AUTO) {
+		Bench_run();
+		// Leave without the normal teardown. PLAT_quitVideo() destroys textures and
+		// flushes the renderer on the assumption that frames have been drawn, and
+		// this mode exits before the first one - going through it segfaults, while
+		// an ordinary exit after a rendered frame is clean. Nothing here needs
+		// unwinding that the kernel will not do, so flush the numbers and go.
+		fflush(NULL);
+		_exit(0);
+	}
+
 	int qm_row = 0;
 	int qm_col = 0;
 	int qm_slot = 0;
