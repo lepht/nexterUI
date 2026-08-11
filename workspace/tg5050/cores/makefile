@@ -80,7 +80,11 @@ gearcoleco_HASH = 8916216764ca8a7965be5f4b4d093a437a1749a6
 gpsp_HASH = 5b6e751f4abf368509146cd143c949c1946ac1ae
 handy_HASH = bc55d462f0b2d6b073ea93dc552ebd73cec60fd1
 libretro-cap32_HASH = 4abfb8be233bec630f369379fb6c1d92d31f1c7d
-libretro-uae_HASH = 96ebfcfc2c66233ad37f6dc99ee991211dc719ad
+# NOTE: this core tracks the 2.6.1 branch (see libretro-uae_BRANCH below), not the
+# default branch. 2.6.1 builds TARGET_NAME puae2021, master builds puae, so a pin
+# off master silently produces a .so this makefile cannot find. Keep this SHA on
+# the 2.6.1 branch.
+libretro-uae_HASH = 6636d5f3fd4417f4e57ab9144fdba35b77fa3a40
 mednafen_pce_fast_HASH = b211204c7026dff6e86e79b00185512e2421fff8
 mednafen_supafaust_HASH = d6187e5337e6c2646d003db3ab1936727ca75301
 mednafen_vb_HASH = 3f53a40bf8aa18777514fd4b220960427e312a3f
