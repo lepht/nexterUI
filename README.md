@@ -1,34 +1,28 @@
 <div align="center">
 
-  <img width=128px src="github/logo_outline.png">
+  <h1>nexterUI</h1>
 
 </div>
 
 <hr>
 
 <h4 align="center">
-  <a href="https://nextui.loveretro.games/usage/#getting-started" target="_blank">Installation Guide</a>
+  <a href="https://github.com/lepht/nexterUI/issues" target="_blank">Issues</a>
   ·
-  <a href="https://nextui.loveretro.games/docs/" target="_blank">Documentation</a>
+  <a href="https://nextui.loveretro.games/usage/#getting-started" target="_blank">Installation (upstream docs)</a>
   ·
-  <a href="https://discord.gg/HKd7wqZk3h" target="_blank">Discord</a>
+  <a href="https://nextui.loveretro.games/docs/" target="_blank">Documentation (upstream docs)</a>
 </h4>
 
 <div align="center"><p>
-    <a href="https://github.com/LoveRetro/NextUI/releases/latest">
-      <img alt="Latest release" src="https://img.shields.io/github/v/release/LoveRetro/NextUI?style=for-the-badge&logo=starship&include_prerelease=false&color=C9CBFF&logoColor=D9E0EE&labelColor=302D41&sort=semver" />
+    <a href="https://github.com/lepht/nexterUI/pulse">
+      <img alt="Last commit" src="https://img.shields.io/github/last-commit/lepht/nexterUI?style=for-the-badge&logo=starship&color=8bd5ca&logoColor=D9E0EE&labelColor=302D41"/>
     </a>
-    <a href="https://github.com/LoveRetro/NextUI/pulse">
-      <img alt="Last commit" src="https://img.shields.io/github/last-commit/LoveRetro/NextUI?style=for-the-badge&logo=starship&color=8bd5ca&logoColor=D9E0EE&labelColor=302D41"/>
+    <a href="https://github.com/lepht/nexterUI/blob/main/LICENSE">
+      <img alt="License" src="https://img.shields.io/github/license/lepht/nexterUI?style=for-the-badge&logo=starship&color=ee999f&logoColor=D9E0EE&labelColor=302D41" />
     </a>
-    <a href="https://github.com/LoveRetro/NextUI/blob/main/LICENSE">
-      <img alt="License" src="https://img.shields.io/github/license/LoveRetro/NextUI?style=for-the-badge&logo=starship&color=ee999f&logoColor=D9E0EE&labelColor=302D41" />
-    </a>
-    <a href="https://github.com/LoveRetro/NextUI/stargazers">
-      <img alt="Stars" src="https://img.shields.io/github/stars/LoveRetro/NextUI?style=for-the-badge&logo=starship&color=c69ff5&logoColor=D9E0EE&labelColor=302D41" />
-    </a>
-    <a href="https://github.com/LoveRetro/NextUI/issues">
-      <img alt="Issues" src="https://img.shields.io/github/issues/LoveRetro/NextUI?style=for-the-badge&logo=bilibili&color=F5E0DC&logoColor=D9E0EE&labelColor=302D41" />
+    <a href="https://github.com/lepht/nexterUI/issues">
+      <img alt="Issues" src="https://img.shields.io/github/issues/lepht/nexterUI?style=for-the-badge&logo=bilibili&color=F5E0DC&logoColor=D9E0EE&labelColor=302D41" />
     </a>
 </div>
 
@@ -37,6 +31,36 @@
 A CFW based of MinUI with a rebuild emulation engine and tons of added features for the TrimUI Brick and Smart Pro. 
 
 For other devices we recommend checking out [MinUI](https://github.com/shauninman/MinUI)
+
+---
+
+## Why this fork
+
+nexterUI is a fork of [NextUI](https://github.com/LoveRetro/NextUI), taken from the last
+commit published under the GPL. It exists for three reasons.
+
+**To stay open.** Upstream is relicensing from GPL-3.0 to PolyForm Noncommercial
+([LoveRetro/NextUI#765](https://github.com/LoveRetro/NextUI/issues/765)), which is not an open
+source licence — it forbids commercial use and fails the OSI definition. Code already published
+under the GPL cannot be relicensed without every contributor's agreement, so this fork carries
+the GPL-3.0 grant forward and keeps it. Everything here stays free as in freedom.
+
+**To add the niceties.** Conveniences that other custom firmware has had for years, that upstream
+left to third-party paks or closed as "use Collections":
+
+- **OS-level favorites**, with first-order support in a context menu on any game the UI lists —
+  a system folder, Recents, a collection, or the search results. Not a pak, not a workaround.
+- **OS-level search**, inspired by the stock TrimUI OS: an on-screen keyboard over a live result
+  list covering every ROM on the card.
+- More to come, in the spirit of OnionOS.
+
+**To do the cleanup.** Several latent defects in the inherited codebase are tracked as issues
+here rather than left in place — out-of-bounds reads on empty folders, leaks on the directory
+alias path, and undefined behaviour in the settings code.
+
+Upstream remains the origin of the great majority of this code, and [MinUI](https://github.com/shauninman/MinUI)
+before it. Both are credited below and neither is going anywhere.
+
 
 - Fixed both screen tearing and sync stutter problems of MinUI by rebuilding the emulator engine core
 - Game switcher menu (Onion OS style) by [@frysee](https://github.com/frysee)
@@ -54,7 +78,7 @@ For other devices we recommend checking out [MinUI](https://github.com/shauninma
 - Dynamic cpu speed scaling (keeps your device cool and extends battery life, but gives the performance right when needed)
 - Fully GPU OpenGL based for faster performance
 - Custom bootlogos contributed by [@SolvalouArt](https://bsky.app/profile/solvalouart.bsky.social)
-- Color and font settings to customize the NextUI interface
+- Color and font settings to customize the nexterUI interface
 - Menu animations
 - LED control, change colors, effects, brightness
 - LED indicators, low battery, stand by, charging (brightness can be set seperately)
@@ -112,7 +136,8 @@ After two minutes the device will go into deep sleep. The leds will turn complet
 
 ## What about X feature?
 
-NextUI supports a variety of optional extras called Paks that are maintained by community members.
+nexterUI supports a variety of optional extras called Paks that are maintained by community members.
+Paks built for NextUI work here unchanged.
 
 Our wiki has a [list of all available Paks](https://nextui.loveretro.games/pak-store/) that can be downloaded from our Pak Store straight on your device.
 
@@ -126,14 +151,16 @@ Our wiki has a [list of all available Paks](https://nextui.loveretro.games/pak-s
 
 ---
 
-## Play Retro's review of NextUI
+## Play Retro's review of NextUI (upstream)
 
 [![image](https://github.com/user-attachments/assets/43217a30-e052-4f67-88a9-c4361f82e72f)](https://www.youtube.com/watch?v=m_7ObMHAFK4)
 
-##  Retro Handhelds' coverage of NextUI
+##  Retro Handhelds' coverage of NextUI (upstream)
 
 [![image](https://github.com/user-attachments/assets/5fd538ea-285b-46e9-add4-1ef99b2ee9e5)](https://www.youtube.com/watch?v=KlYVmtYDqRI)
 
 ---
 
-## For all other info visit our website: [nextui.loveretro.games](https://nextui.loveretro.games)
+## Upstream documentation lives at [nextui.loveretro.games](https://nextui.loveretro.games)
+
+It still applies to nexterUI in almost every respect; where the two diverge, this repo is the authority.

@@ -1,16 +1,17 @@
-NextUI (formerly MinUI Next), a custom OS based of MinUI with screen sync fixes and many many more features!
+nexterUI, a GPL-licensed fork of NextUI (formerly MinUI Next), a custom OS based of MinUI
+with screen sync fixes and many many more features!
 
 Source:
-https://github.com/LoveRetro/NextUI
+https://github.com/lepht/nexterUI
 
 ----------------------------------------
 Installing
 
 PREFACE
 
-NextUI has two essential parts: an installer/updater zip archive named "MinUI.zip" and a bootstrap file or folder with names that vary by platform.
+nexterUI has two essential parts: an installer/updater zip archive named "MinUI.zip" and a bootstrap file or folder with names that vary by platform.
 
-On devices that support two SD cards NextUI will generally end up being installed on the "secondary" one. All instances of "SD card" or "primary card" refer to the card that goes into the second slot or to the sole SD card of devices that only support a single card. 
+On devices that support two SD cards nexterUI will generally end up being installed on the "secondary" one. All instances of "SD card" or "primary card" refer to the card that goes into the second slot or to the sole SD card of devices that only support a single card. 
 
 Please refer to https://nextui.loveretro.games/usage/#getting-started for detailed instructions that might differ slightly between devices.
 
@@ -18,7 +19,7 @@ The primary card should be a reputable brand and freshly formatted as FAT32 (MBR
 
 CAVEATS
 
-While NextUI can be updated from any device once installed, some devices require (minor) changes to NAND or TF1 (via the aforementioned bootstrap file or folder) and therefore need to be installed from the specific device before using. The same is true when trying to use an existing card in a new device of the same type. When in doubt, follow the installation instructions; if all the necessary bits are already installed, the installer will just act as an updater instead.
+While nexterUI can be updated from any device once installed, some devices require (minor) changes to NAND or TF1 (via the aforementioned bootstrap file or folder) and therefore need to be installed from the specific device before using. The same is true when trying to use an existing card in a new device of the same type. When in doubt, follow the installation instructions; if all the necessary bits are already installed, the installer will just act as an updater instead.
 
 ALL
 
@@ -26,7 +27,7 @@ Preload the "Bios" and "Roms" folders then copy both to the root of your primary
 
 MAGICX MINI ZERO 28
 
-NextUI is meant to be used with Moss installed on the SD card that goes into the left slot (labeled TF1/INT). Download and flash the latest version:
+nexterUI is meant to be used with Moss installed on the SD card that goes into the left slot (labeled TF1/INT). Download and flash the latest version:
 
 	https://github.com/shauninman/Moss-zero28/releases
 
@@ -63,19 +64,19 @@ TRIMUI BRICK / BRICK PRO / SMART PRO S
 ----------------------------------------
 Quicksave & auto-resume
 
-NextUI will create a quicksave when powering off in-game. The next time you power on the device it will automatically resume from where you left off. A quicksave is created when powering off manually or automatically after a short sleep. On devices without a POWER button (eg. the Trimui Smart or M17) press the MENU button twice to put the device to sleep before flipping the POWER switch.
+nexterUI will create a quicksave when powering off in-game. The next time you power on the device it will automatically resume from where you left off. A quicksave is created when powering off manually or automatically after a short sleep. On devices without a POWER button (eg. the Trimui Smart or M17) press the MENU button twice to put the device to sleep before flipping the POWER switch.
 
 ----------------------------------------
 Roms
 
-Included in this zip is a "Roms" folder containing folders for each console NextUI currently supports. You can rename these folders but you must keep the uppercase tag name in parentheses in order to retain the mapping to the correct emulator (eg. "Nintendo Entertainment System (FC)" could be renamed to "Nintendo (FC)", "NES (FC)", or "Famicom (FC)"). 
+Included in this zip is a "Roms" folder containing folders for each console nexterUI currently supports. You can rename these folders but you must keep the uppercase tag name in parentheses in order to retain the mapping to the correct emulator (eg. "Nintendo Entertainment System (FC)" could be renamed to "Nintendo (FC)", "NES (FC)", or "Famicom (FC)"). 
 
 When one or more folder share the same display name (eg. "Game Boy Advance (GBA)" and "Game Boy Advance (MGBA)") they will be combined into a single menu item containing the roms from both folders (continuing the previous example, "Game Boy Advance"). This allows opening specific roms with an alternate pak.
 
 ----------------------------------------
 Bios
 
-Some emulators require or perform much better with official bios. NextUI is strictly BYOB. Place the bios for each system in a folder that matches the tag in the corresponding "Roms" folder name (eg. bios for "Sony PlayStation (PS)" roms goes in "/Bios/PS/"), or refer to https://nextui.loveretro.games/usage/#required-bios for the correct file names and locations.
+Some emulators require or perform much better with official bios. nexterUI is strictly BYOB. Place the bios for each system in a folder that matches the tag in the corresponding "Roms" folder name (eg. bios for "Sony PlayStation (PS)" roms goes in "/Bios/PS/"), or refer to https://nextui.loveretro.games/usage/#required-bios for the correct file names and locations.
 
 Bios file names are case-sensitive:
 
@@ -101,13 +102,13 @@ Cheat file name needs to match ROM name, and go underneath the "Cheats" director
 
 Disc-based games
 
-To streamline launching multi-file disc-based games with NextUI place your bin/cue (and/or iso/wav files) in a folder with the same name as the cue file. NextUI will automatically launch the cue file instead of navigating into the folder when selected, eg. 
+To streamline launching multi-file disc-based games with nexterUI place your bin/cue (and/or iso/wav files) in a folder with the same name as the cue file. nexterUI will automatically launch the cue file instead of navigating into the folder when selected, eg. 
 
   Harmful Park (English v1.0)/
     Harmful Park (English v1.0).bin
     Harmful Park (English v1.0).cue
 
-For multi-disc games, put all the files for all the discs in a single folder. Then create an m3u file in that folder (just a text file containing the relative path to each disc's cue file on a separate line) with the same name as the folder. Instead of showing the entire messy contents of the folder, NextUI will launch the appropriate cue file, eg. For a "Policenauts" folder structured like this:
+For multi-disc games, put all the files for all the discs in a single folder. Then create an m3u file in that folder (just a text file containing the relative path to each disc's cue file on a separate line) with the same name as the folder. Instead of showing the entire messy contents of the folder, nexterUI will launch the appropriate cue file, eg. For a "Policenauts" folder structured like this:
 
   Policenauts (English v1.0)/
     Policenauts (English v1.0).m3u
@@ -123,7 +124,7 @@ The m3u file would contain just:
 
 When a multi-disc game is detected the in-game menu's Continue item will also show the current disc. Press left or right to switch between discs.
 
-NextUI also supports chd files and official pbp files (multi-disc pbp files larger than 2GB are not supported). Regardless of the multi-disc file format used, every disc of the same game share the same memory card and save state slots.
+nexterUI also supports chd files and official pbp files (multi-disc pbp files larger than 2GB are not supported). Regardless of the multi-disc file format used, every disc of the same game share the same memory card and save state slots.
 
 ----------------------------------------
 Collections
@@ -139,7 +140,7 @@ A collection is just a text file containing an ordered list of full paths to rom
 
 Display names
 
-Certain (unsupported arcade) cores require roms to use arcane file names. You can override the display name used throughout NextUI by creating a map.txt in the same folder as the files you want to rename. One line per file, `rom.ext` followed by a single tab followed by `Display Name`. You can hide a file by adding a `.` at the beginning of the display name. eg.
+Certain (unsupported arcade) cores require roms to use arcane file names. You can override the display name used throughout nexterUI by creating a map.txt in the same folder as the files you want to rename. One line per file, `rom.ext` followed by a single tab followed by `Display Name`. You can hide a file by adding a `.` at the beginning of the display name. eg.
 	
   neogeo.zip	.Neo Geo Bios
   mslug.zip	Metal Slug
@@ -148,12 +149,12 @@ Certain (unsupported arcade) cores require roms to use arcane file names. You ca
 ----------------------------------------
 Simple mode
 
-Not simple enough for you (or maybe your kids)? NextUI has a simple mode that hides the Tools folder and replaces Options in the in-game menu with Reset. Perfect for handing off to littles (and olds too I guess). Just create an empty file named "enable-simple-mode" (no extension) in "/.userdata/shared/".
+Not simple enough for you (or maybe your kids)? nexterUI has a simple mode that hides the Tools folder and replaces Options in the in-game menu with Reset. Perfect for handing off to littles (and olds too I guess). Just create an empty file named "enable-simple-mode" (no extension) in "/.userdata/shared/".
 
 ----------------------------------------
 Advanced
 
-NextUI can automatically run a user-authored shell script on boot. Just place a file named "auto.sh" in "/.userdata/<DEVICE>/". If you're on Windows, make sure your text editor uses Unix line-endings (eg. `\n`), these devices usually choke on Windows line-endings (eg. `\r\n`).
+nexterUI can automatically run a user-authored shell script on boot. Just place a file named "auto.sh" in "/.userdata/<DEVICE>/". If you're on Windows, make sure your text editor uses Unix line-endings (eg. `\n`), these devices usually choke on Windows line-endings (eg. `\r\n`).
 
 ----------------------------------------
 Thanks

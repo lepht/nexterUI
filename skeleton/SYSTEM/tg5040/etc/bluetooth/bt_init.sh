@@ -2,7 +2,7 @@
 # Taken from allwinner/btmanager/config/xradio_bt_init.sh for NextUI
 bt_hciattach="hciattach"
 TRIMUI_MODEL=`strings /usr/trimui/bin/MainUI | grep ^Trimui`
-DEVICE_NAME="$TRIMUI_MODEL (NextUI)"
+DEVICE_NAME="$TRIMUI_MODEL (nexterUI)"
 
 reset_bluetooth_power() {
 	echo 0 > /sys/class/rfkill/rfkill0/state;
