@@ -50,6 +50,9 @@ enum {
 	SCREEN_GAMELIST,
 	SCREEN_GAMESWITCHER,
 	SCREEN_QUICKMENU,
+	// a view that is only reachable from another screen, never a default view
+	// (keep after the ones above, defaultView persists these as plain ints)
+	SCREEN_CONTEXTMENU,
 	// meta
 	SCREEN_GAME,
 	SCREEN_OFF
@@ -133,6 +136,7 @@ typedef struct
 	bool showMenuAnimations;
 	int showMenuTransitions; // 0=off, 1=snappy, 2=comfy
 	bool showRecents;
+	bool showFavorites;
 	bool showTools;
 	bool showCollections;
 	bool showGameArt;
@@ -222,6 +226,7 @@ typedef struct
 #define CFG_DEFAULT_SHOWMENUANIMATIONS true
 #define CFG_DEFAULT_SHOWMENUTRANSITIONS TRANSITION_SNAPPY
 #define CFG_DEFAULT_SHOWRECENTS true
+#define CFG_DEFAULT_SHOWFAVORITES true
 #define CFG_DEFAULT_SHOWCOLLECTIONS true
 #define CFG_DEFAULT_SHOWGAMEART true
 #define CFG_DEFAULT_SHOWFOLDERNAMESATROOT true
@@ -350,6 +355,10 @@ void CFG_setThumbnailRadius(int radius);
 // Show/hide recently played in the main menu.
 bool CFG_getShowRecents(void);
 void CFG_setShowRecents(bool show);
+// Show/hide favorites in the main menu. Only ever visible when at least one game
+// has been favorited, same as recents.
+bool CFG_getShowFavorites(void);
+void CFG_setShowFavorites(bool show);
 // Show/hide tools folder in the main menu.
 bool CFG_getShowTools(void);
 void CFG_setShowTools(bool show);

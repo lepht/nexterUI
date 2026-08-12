@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <libgen.h>  // For dirname()
+#include <sys/stat.h>
 #include "defines.h"
 #include "api.h"
 #include "utils.h"
@@ -353,6 +354,7 @@ static void Directory_index(Directory* self) {
 static Array* getRoot(void);
 static Array* getRoms(void);
 static Array* getRecents(void);
+static Array* getFavorites(void);
 static Array* getCollection(char* path);
 static Array* getDiscs(char* path);
 static Array* getEntries(char* path);
@@ -369,6 +371,9 @@ static Directory* Directory_new(char* path, int selected) {
 	}
 	else if (exactMatch(path, FAUX_RECENT_PATH)) {
 		self->entries = getRecents();
+	}
+	else if (exactMatch(path, FAUX_FAVORITES_PATH)) {
+		self->entries = getFavorites();
 	}
 	else if (exactMatch(path, ROMS_PATH)) {
 		self->entries = getRoms();
@@ -407,6 +412,8 @@ static void DirectoryArray_free(Array* self) {
 
 ///////////////////////////////////////
 
+// A saved reference to a game. Used for both the recents list and the favorites
+// list: the two differ in ordering and lifetime, not in what they store.
 typedef struct Recent {
 	char* path; // NOTE: this is without the SDCARD_PATH prefix!
 	char* alias;
@@ -455,6 +462,7 @@ static void RecentArray_free(Array* self) {
 static Directory* top;
 static Array* stack; // DirectoryArray
 static Array* recents; // RecentArray
+static Array* favorites; // RecentArray, see loadFavorites()
 static Array *quick; // EntryArray
 static Array *quickActions; // EntryArray
 
@@ -511,6 +519,108 @@ static void addRecent(char* path, char* alias) {
 	}
 	saveRecents();
 }
+
+///////////////////////////////////////
+
+// Favorites are stored the same way recents are: one SDCARD-relative path per
+// line, optionally followed by a tab and the display name it was favorited
+// under. Unlike recents the list is authoritative in memory - it is read once at
+// launch and every mutation writes straight back out, so a favorite survives
+// even when the game it points at is never launched.
+
+static int isDirectory(const char* path) {
+	struct stat info;
+	return stat(path, &info)==0 && S_ISDIR(info.st_mode);
+}
+
+static void saveFavorites(void) {
+	char tmp_path[MAX_PATH];
+	FILE* file = openAtomic(FAVORITES_PATH, tmp_path, sizeof(tmp_path));
+	if (file) {
+		for (int i=0; i<favorites->count; i++) {
+			Recent* favorite = favorites->items[i];
+			fputs(favorite->path, file);
+			if (favorite->alias) {
+				fputs("\t", file);
+				fputs(favorite->alias, file);
+			}
+			putc('\n', file);
+		}
+		commitAtomic(file, FAVORITES_PATH, tmp_path);
+	}
+}
+static void loadFavorites(void) {
+	if (favorites) RecentArray_free(favorites);
+	favorites = Array_new();
+
+	FILE* file = fopen(FAVORITES_PATH, "r");
+	if (!file) return;
+
+	int pruned = 0;
+	char line[256];
+	while (fgets(line,256,file)!=NULL) {
+		normalizeNewline(line);
+		trimTrailingNewlines(line);
+		if (strlen(line)==0) continue; // skip empty lines
+
+		char* path = line;
+		char* alias = NULL;
+		char* tmp = strchr(line,'\t');
+		if (tmp) {
+			tmp[0] = '\0';
+			alias = tmp+1;
+		}
+
+		char sd_path[256];
+		sprintf(sd_path, "%s%s", SDCARD_PATH, path);
+		if (!exists(sd_path)) { // the game is gone, so is the favorite
+			pruned = 1;
+			continue;
+		}
+		if (RecentArray_indexOf(favorites, path)!=-1) { // hand-edited file
+			pruned = 1;
+			continue;
+		}
+		Array_push(favorites, Recent_new(path, alias));
+	}
+	fclose(file);
+
+	if (pruned) saveFavorites();
+}
+static int hasFavorites(void) {
+	return favorites && favorites->count>0;
+}
+
+// `sd_path` is a full path, ie. one that still has the SDCARD_PATH prefix.
+static int favoriteIndexOf(char* sd_path) {
+	if (!favorites || !prefixMatch(SDCARD_PATH, sd_path)) return -1;
+
+	char path[MAX_PATH];
+	if (!canonicalGamePath(sd_path, path, sizeof(path))) return -1;
+	return RecentArray_indexOf(favorites, path + strlen(SDCARD_PATH)); // platform agnostic
+}
+static int isFavorite(char* sd_path) {
+	return favoriteIndexOf(sd_path) != -1;
+}
+static void addFavorite(char* sd_path, char* alias) {
+	if (!prefixMatch(SDCARD_PATH, sd_path) || favoriteIndexOf(sd_path)!=-1) return;
+
+	char path[MAX_PATH];
+	if (!canonicalGamePath(sd_path, path, sizeof(path))) return;
+	Array_push(favorites, Recent_new(path + strlen(SDCARD_PATH), alias));
+	saveFavorites();
+}
+static void removeFavorite(char* sd_path) {
+	int id = favoriteIndexOf(sd_path);
+	if (id==-1) return;
+
+	Recent* favorite = favorites->items[id];
+	Array_remove(favorites, favorite);
+	Recent_free(favorite);
+	saveFavorites();
+}
+
+///////////////////////////////////////
 
 static Entry* entryFromPakName(char* pak_name)
 {
@@ -812,6 +922,9 @@ static Array* getQuickEntries(void) {
 	if (recents && recents->count)
 		Array_push(entries, Entry_newNamed(FAUX_RECENT_PATH, ENTRY_DIR, "Recents"));
 
+	if (hasFavorites())
+		Array_push(entries, Entry_new(FAUX_FAVORITES_PATH, ENTRY_DIR));
+
 	if (hasCollections())
 		Array_push(entries, Entry_new(COLLECTIONS_PATH, ENTRY_DIR));
 
@@ -857,6 +970,9 @@ static Array* getRoot(void) {
 
     if (hasRecents() && CFG_getShowRecents())
 		Array_push(root, Entry_new(FAUX_RECENT_PATH, ENTRY_DIR));
+
+	if (hasFavorites() && CFG_getShowFavorites())
+		Array_push(root, Entry_new(FAUX_FAVORITES_PATH, ENTRY_DIR));
 
 	Array *entries = getRoms();
 
@@ -907,6 +1023,31 @@ static Array* getRecents(void) {
 		if(entry)
 			Array_push(entries, entry);
 	}
+	return entries;
+}
+
+// Unlike recents, favorites don't have a meaningful order of their own, so the
+// list is alphabetized like any other game list (which also makes the L1/R1
+// alpha jumps work inside it).
+static Array* getFavorites(void) {
+	Array* entries = Array_new();
+	for (int i=0; i<favorites->count; i++) {
+		Recent *favorite = favorites->items[i];
+		if (!favorite->available) continue;
+
+		char sd_path[256];
+		sprintf(sd_path, "%s%s", SDCARD_PATH, favorite->path);
+
+		// a favorited multi-disc game is the folder holding it, not a rom file
+		int type = suffixMatch(".pak", sd_path) ? ENTRY_PAK : (isDirectory(sd_path) ? ENTRY_DIR : ENTRY_ROM);
+		Entry* entry = Entry_new(sd_path, type);
+		if (favorite->alias) {
+			free(entry->name);
+			entry->name = strdup(favorite->alias);
+		}
+		Array_push(entries, entry);
+	}
+	EntryArray_sort(entries);
 	return entries;
 }
 
@@ -1540,16 +1681,15 @@ static void Entry_open(Entry* self) {
 	if (self->type==ENTRY_ROM) {
 		startgame = 1;
 		char *last = NULL;
-		if (prefixMatch(COLLECTIONS_PATH, top->path)) {
-			char* tmp;
-			char filename[256];
-
-			tmp = strrchr(self->path, '/');
-			if (tmp) strcpy(filename, tmp+1);
-
-			char last_path[256];
-			sprintf(last_path, "%s/%s", top->path, filename);
-			last = last_path;
+		char last_path[256];
+		// launching out of a list the game doesn't really live in should come
+		// back to that list rather than to the folder it came from, see loadLast()
+		if (prefixMatch(COLLECTIONS_PATH, top->path) || exactMatch(FAUX_FAVORITES_PATH, top->path)) {
+			char* tmp = strrchr(self->path, '/');
+			if (tmp) {
+				sprintf(last_path, "%s/%s", top->path, tmp+1);
+				last = last_path;
+			}
 		}
 		openRom(self->path, last);
 	}
@@ -1591,6 +1731,10 @@ static void loadLast(void) { // call after loading root directory
 	tmp = strrchr(last_path, '/');
 	if (tmp) strcpy(filename, tmp);
 
+	// Collections and Favorites list games that live elsewhere, so the saved path
+	// is <list>/<filename> and the entry it refers to is matched by filename.
+	int is_faux_list = prefixMatch(COLLECTIONS_PATH, full_path) || prefixMatch(FAUX_FAVORITES_PATH, full_path);
+
 	Array* last = Array_new();
 	while (!exactMatch(last_path, SDCARD_PATH)) {
 		Array_push(last, strdup(last_path));
@@ -1614,7 +1758,7 @@ static void loadLast(void) { // call after loading root directory
 				Entry* entry = top->entries->items[i];
 
 				// NOTE: strlen() is required for collated_path, '\0' wasn't reading as NULL for some reason
-				if (exactMatch(entry->path, path) || (strlen(collated_path) && prefixMatch(collated_path, entry->path)) || (prefixMatch(COLLECTIONS_PATH, full_path) && suffixMatch(filename, entry->path))) {
+				if (exactMatch(entry->path, path) || (strlen(collated_path) && prefixMatch(collated_path, entry->path)) || (is_faux_list && suffixMatch(filename, entry->path))) {
 					top->selected = i;
 					if (i>=top->end) {
 						top->start = i;
@@ -1624,7 +1768,7 @@ static void loadLast(void) { // call after loading root directory
 							top->start = top->end - MAIN_ROW_COUNT;
 						}
 					}
-					if (last->count==0 && !exactMatch(entry->path, FAUX_RECENT_PATH) && !(!exactMatch(entry->path, COLLECTIONS_PATH) && prefixMatch(COLLECTIONS_PATH, entry->path))) break; // don't show contents of auto-launch dirs
+					if (last->count==0 && !exactMatch(entry->path, FAUX_RECENT_PATH) && !exactMatch(entry->path, FAUX_FAVORITES_PATH) && !(!exactMatch(entry->path, COLLECTIONS_PATH) && prefixMatch(COLLECTIONS_PATH, entry->path))) break; // don't show contents of auto-launch dirs
 
 					if (entry->type==ENTRY_DIR) {
 						openDirectory(entry->path, 0);
@@ -1650,6 +1794,12 @@ static void QuickMenu_init(void) {
 	quick = getQuickEntries();
 	quickActions = getQuickToggles();
 }
+// The primary row only lists Favorites while there are any, so it has to be
+// rebuilt when that changes. NOTE: the caller owns recomputing the row geometry.
+static void QuickMenu_reload(void) {
+	EntryArray_free(quick);
+	quick = getQuickEntries();
+}
 static void QuickMenu_quit(void) {
 	EntryArray_free(quick);
 	EntryArray_free(quickActions);
@@ -1658,6 +1808,7 @@ static void QuickMenu_quit(void) {
 static void Menu_init(void) {
 	stack = Array_new(); // array of open Directories
 	recents = Array_new();
+	loadFavorites(); // before the root list, which may want to show them
 
 	openDirectory(SDCARD_PATH, 0);
 	loadLast(); // restore state when available
@@ -1666,6 +1817,7 @@ static void Menu_init(void) {
 }
 static void Menu_quit(void) {
 	RecentArray_free(recents);
+	RecentArray_free(favorites);
 	DirectoryArray_free(stack);
 
 	QuickMenu_quit();
@@ -2245,6 +2397,243 @@ void cleanupImageLoaderPool() {
 	flipCond = NULL;
 }
 ///////////////////////////////////////
+// Context menu and global rom search.
+//
+// Both are screens layered over a game list, and both can change the very list
+// they were opened from (favoriting rebuilds Favorites, unfavoriting can empty
+// it). So neither holds on to the Entry it is acting on - they copy what they
+// need out of it up front.
+
+// Does this folder stand in for a game rather than hold more of them? ie. is it
+// one of the multi-disc folders openDirectory() auto-launches.
+static int isGameDir(char* path) {
+	char auto_path[256];
+	if (hasCue(path, auto_path)) return 1;
+
+	char* tmp = strrchr(auto_path, '.'); // hasCue() always leaves a ".cue" here
+	if (!tmp) return 0;
+	strcpy(tmp+1, "m3u");
+	return exists(auto_path);
+}
+// A "game" is anything the user can launch out of a list: a rom, or one of those
+// folders.
+static int isGameEntry(Entry* self) {
+	if (!self) return 0;
+	if (!prefixMatch(ROMS_PATH, self->path)) return 0;
+	if (self->type==ENTRY_ROM) return 1;
+	return self->type==ENTRY_DIR && isGameDir(self->path);
+}
+
+// The root list and the faux directories are snapshots taken when they were
+// opened, so anything that changes what belongs in them has to rebuild them
+// before they are drawn again.
+static void positionDirectory(Directory* self, int selected) {
+	int total = self->entries->count;
+	if (selected>=total) selected = total-1;
+	if (selected<0) selected = 0;
+
+	self->selected = selected;
+	self->start = 0;
+	self->end = (total<MAIN_ROW_COUNT) ? total : MAIN_ROW_COUNT;
+	if (selected>=self->end) {
+		self->end = selected+1;
+		self->start = self->end - MAIN_ROW_COUNT;
+		if (self->start<0) self->start = 0;
+	}
+}
+static void refreshCurrentDirectory(void) {
+	Directory* stale = top;
+	Directory* fresh = Directory_new(stale->path, 0);
+
+	if (fresh->entries->count==0) { // last entry removed, there's nothing to show
+		Directory_free(fresh);
+		if (stack->count>1) closeDirectory();
+		return;
+	}
+
+	positionDirectory(fresh, stale->selected);
+	stack->items[stack->count-1] = fresh;
+	Directory_free(stale);
+	top = fresh;
+}
+static void refreshRoot(void) {
+	if (!stack || stack->count==0) return;
+
+	Directory* stale = stack->items[0];
+	char selected_path[256] = "";
+	if (stale->entries->count>0 && stale->selected<stale->entries->count) {
+		Entry* entry = stale->entries->items[stale->selected];
+		strncpy(selected_path, entry->path, sizeof(selected_path)-1);
+	}
+
+	Directory* fresh = Directory_new(SDCARD_PATH, 0);
+	positionDirectory(fresh, EntryArray_indexOf(fresh->entries, selected_path));
+
+	if (top==stale) top = fresh;
+	stack->items[0] = fresh;
+	Directory_free(stale);
+}
+
+///////////////////////////////////////
+
+enum {
+	CONTEXT_ADD_FAVORITE,
+	CONTEXT_REMOVE_FAVORITE,
+	CONTEXT_REMOVE_RECENT,
+	CONTEXT_ACTION_COUNT,
+};
+
+static int context_actions[CONTEXT_ACTION_COUNT];
+static int context_count = 0;
+static int context_selected = 0;
+static int context_return_screen = SCREEN_GAMELIST;
+static char context_path[256];
+static char context_name[256];
+
+static const char* contextActionName(int action) {
+	switch (action) {
+		case CONTEXT_ADD_FAVORITE: return "Add to Favorites";
+		case CONTEXT_REMOVE_FAVORITE: return "Remove from Favorites";
+		case CONTEXT_REMOVE_RECENT: return "Remove from Recents";
+	}
+	return "";
+}
+
+// Returns 0 when there's nothing to offer for this entry, in which case the
+// caller should stay where it is.
+static int openContextMenu(Entry* entry, int return_screen, int in_recents) {
+	if (!isGameEntry(entry)) return 0;
+
+	strncpy(context_path, entry->path, sizeof(context_path)-1);
+	context_path[sizeof(context_path)-1] = '\0';
+	// the disambiguated name where there is one, so the title says which of two
+	// same-named games this is - and so does the favorite it creates
+	strncpy(context_name, entry->unique ? entry->unique : entry->name, sizeof(context_name)-1);
+	context_name[sizeof(context_name)-1] = '\0';
+
+	context_count = 0;
+	context_actions[context_count++] = isFavorite(context_path) ? CONTEXT_REMOVE_FAVORITE : CONTEXT_ADD_FAVORITE;
+	if (in_recents) context_actions[context_count++] = CONTEXT_REMOVE_RECENT;
+
+	context_selected = 0;
+	context_return_screen = return_screen;
+	return 1;
+}
+
+static void removeRecent(char* sd_path) {
+	if (!prefixMatch(SDCARD_PATH, sd_path)) return;
+
+	int id = RecentArray_indexOf(recents, sd_path + strlen(SDCARD_PATH));
+	if (id==-1) return;
+
+	Recent* recent = recents->items[id];
+	Array_remove(recents, recent);
+	Recent_free(recent);
+	saveRecents();
+}
+
+static void applyContextAction(void) {
+	int had_favorites = hasFavorites();
+	int had_recents = recents->count>0;
+
+	switch (context_actions[context_selected]) {
+		case CONTEXT_ADD_FAVORITE: addFavorite(context_path, context_name); break;
+		case CONTEXT_REMOVE_FAVORITE: removeFavorite(context_path); break;
+		case CONTEXT_REMOVE_RECENT: removeRecent(context_path); break;
+	}
+
+	// the game switcher indexes straight into recents
+	if (switcher_selected>=recents->count) switcher_selected = 0;
+
+	// a list built from what we just changed is now stale
+	if (exactMatch(top->path, FAUX_FAVORITES_PATH) || exactMatch(top->path, FAUX_RECENT_PATH))
+		refreshCurrentDirectory();
+
+	// ...and so is the root list, which only carries Recents and Favorites while
+	// they have entries, along with the quick menu's copy of the same rule
+	if (had_favorites!=hasFavorites() || had_recents!=(recents->count>0)) {
+		refreshRoot();
+		QuickMenu_reload();
+	}
+}
+
+///////////////////////////////////////
+
+// Draws `text` vertically centered in `rect`, clipped to its width.
+static void blitRowText(const char* text, SDL_Rect* rect, SDL_Color color) {
+	SDL_LockMutex(fontMutex);
+	SDL_Surface* surface = TTF_RenderUTF8_Blended(font.large, text, color);
+	SDL_UnlockMutex(fontMutex);
+	if (!surface) return;
+
+	int offset_y = (rect->h - surface->h + 1) >> 1;
+	SDL_BlitSurface(surface, &(SDL_Rect){0,0,rect->w,surface->h}, screen, &(SDL_Rect){rect->x, rect->y + offset_y});
+	SDL_FreeSurface(surface);
+}
+
+// The name of whatever the screen is acting on, in the same top-left pill the
+// game switcher uses. `ow` is the width of the hardware group opposite it.
+static void blitTitlePill(const char* name, int ow) {
+	int max_width = screen->w - SCALE1(PADDING * 2) - ow;
+
+	char display_name[256];
+	int text_width = GFX_truncateText(font.large, name, display_name, max_width, SCALE1(BUTTON_PADDING*2));
+	max_width = MIN(max_width, text_width);
+
+	SDL_Rect pill_rect = { SCALE1(PADDING), SCALE1(PADDING), max_width, SCALE1(PILL_SIZE) };
+	GFX_blitPillLight(ASSET_WHITE_PILL, screen, &pill_rect);
+
+	SDL_Rect text_rect = { SCALE1(PADDING + BUTTON_PADDING), SCALE1(PADDING), max_width - SCALE1(BUTTON_PADDING*2), SCALE1(PILL_SIZE) };
+	blitRowText(display_name, &text_rect, uintToColour(THEME_COLOR6_255));
+}
+
+static void drawContextMenu(int ow) {
+	blitTitlePill(context_name, ow);
+
+	int row_height = SCALE1(PILL_SIZE);
+	int panel_width = 0;
+	for (int i=0; i<context_count; i++) {
+		int w, h;
+		GFX_sizeText(font.large, contextActionName(context_actions[i]), SCALE1(FONT_LARGE), &w, &h);
+		if (w>panel_width) panel_width = w;
+	}
+	panel_width += SCALE1(BUTTON_MARGIN*2 + BUTTON_PADDING*2);
+	panel_width = MIN(panel_width, screen->w - SCALE1(PADDING*2));
+
+	int panel_height = context_count * row_height + SCALE1(BUTTON_MARGIN*2);
+	SDL_Rect panel_rect = {
+		(screen->w - panel_width) / 2,
+		(screen->h - panel_height) / 2,
+		panel_width,
+		panel_height
+	};
+	GFX_blitRectColor(ASSET_STATE_BG, screen, &panel_rect, THEME_COLOR3);
+
+	for (int i=0; i<context_count; i++) {
+		SDL_Rect row_rect = {
+			panel_rect.x + SCALE1(BUTTON_MARGIN),
+			panel_rect.y + SCALE1(BUTTON_MARGIN) + i * row_height,
+			panel_width - SCALE1(BUTTON_MARGIN*2),
+			row_height
+		};
+		int is_selected = (i==context_selected);
+		if (is_selected) GFX_blitPillDark(ASSET_WHITE_PILL, screen, &row_rect);
+
+		SDL_Rect text_rect = {
+			row_rect.x + SCALE1(BUTTON_PADDING),
+			row_rect.y,
+			row_rect.w - SCALE1(BUTTON_PADDING*2),
+			row_rect.h
+		};
+		blitRowText(contextActionName(context_actions[i]),
+			&text_rect,
+			uintToColour(is_selected ? THEME_COLOR5_255 : THEME_COLOR4_255));
+	}
+
+	GFX_blitButtonGroup((char*[]){ "B","CANCEL", "A","SELECT", NULL }, 1, screen, 1);
+}
+
+///////////////////////////////////////
 
 int main (int argc, char *argv[]) {
 	// LOG_info("time from launch to:\n");
@@ -2452,6 +2841,39 @@ int main (int argc, char *argv[]) {
 				}
 			}
 		}
+		else if (currentScreen == SCREEN_CONTEXTMENU) {
+			if (PAD_justPressed(BTN_B) || PAD_justPressed(BTN_Y) || PAD_tappedMenu(now)) {
+				currentScreen = context_return_screen;
+				dirty = 1;
+			}
+			else if (PAD_justRepeated(BTN_UP)) {
+				context_selected -= 1;
+				if (context_selected<0) context_selected = context_count-1;
+				dirty = 1;
+			}
+			else if (PAD_justRepeated(BTN_DOWN)) {
+				context_selected += 1;
+				if (context_selected>=context_count) context_selected = 0;
+				dirty = 1;
+			}
+			else if (PAD_justReleased(BTN_A)) {
+				applyContextAction();
+
+				// the quick menu's primary row may have gained or lost Favorites
+				qm_slots = QUICK_SWITCHER_COUNT > quick->count ? quick->count : QUICK_SWITCHER_COUNT;
+				if (qm_col>=quick->count) {
+					qm_col = 0;
+					qm_slot = 0;
+					qm_shift = 0;
+				}
+
+				currentScreen = context_return_screen;
+				total = top->entries->count;
+				if (total>0) readyResume(top->entries->items[top->selected]);
+				folderbgchanged = 1; // the list underneath may have changed shape
+				dirty = 1;
+			}
+		}
 		else if(currentScreen == SCREEN_GAMESWITCHER) {
 			if (PAD_justPressed(BTN_B) || PAD_tappedSelect(now)) {
 				currentScreen = SCREEN_GAMELIST;
@@ -2635,6 +3057,13 @@ int main (int argc, char *argv[]) {
 				dirty = 1;
 
 				if (total>0) readyResume(top->entries->items[top->selected]);
+			}
+			else if (total>0 && PAD_justPressed(BTN_Y)) {
+				// works from any list a game shows up in: a system folder, Recents,
+				// Favorites, a collection
+				if (openContextMenu(entry, SCREEN_GAMELIST, exactMatch(top->path, FAUX_RECENT_PATH)))
+					currentScreen = SCREEN_CONTEXTMENU;
+				dirty = 1;
 			}
 		}
 
@@ -2828,6 +3257,16 @@ int main (int argc, char *argv[]) {
 				GFX_clear(screen);
 				GFX_flipHidden();
 				GFX_animateSurfaceOpacity(tmpOldScreen,0,0,screen->w,screen->h,255,0,CFG_getMenuTransitions() ? 150:20,LAYER_BACKGROUND);
+			}
+			else if(currentScreen == SCREEN_CONTEXTMENU) {
+				// keeps whatever background was already loaded and just drops the
+				// game art, so the panel underneath reads clearly
+				if(lastScreen != SCREEN_CONTEXTMENU)
+					GFX_clearLayers(LAYER_THUMBNAIL);
+
+				drawContextMenu(ow);
+
+				lastScreen = SCREEN_CONTEXTMENU;
 			}
 			else if(currentScreen == SCREEN_GAMESWITCHER) {
 				GFX_clearLayers(LAYER_ALL);
@@ -3062,7 +3501,12 @@ int main (int argc, char *argv[]) {
 					}
 				}
 				else {
-					if (stack->count>1) {
+					// on a game the context menu takes the slot BACK would have
+					// used - B still goes back, it just isn't spelled out
+					if (isGameEntry(entry)) {
+						GFX_blitButtonGroup((char*[]){ "Y","OPTIONS", "A","OPEN", NULL }, 1, screen, 1);
+					}
+					else if (stack->count>1) {
 						GFX_blitButtonGroup((char*[]){ "B","BACK", "A","OPEN", NULL }, 1, screen, 1);
 					}
 					else {
@@ -3214,7 +3658,7 @@ int main (int argc, char *argv[]) {
 				animationdirection = ANIM_NONE;
 			}
 
-			if(lastScreen == SCREEN_QUICKMENU) {
+			if(lastScreen == SCREEN_QUICKMENU || lastScreen == SCREEN_CONTEXTMENU) {
 				SDL_LockMutex(bgMutex);
 				if(folderbgchanged) {
 					if(folderbgbmp)
@@ -3327,7 +3771,7 @@ int main (int argc, char *argv[]) {
 				setAnimationDraw(0);
 			}
 			SDL_UnlockMutex(animMutex);
-			if (currentScreen != SCREEN_GAMESWITCHER && currentScreen != SCREEN_QUICKMENU) {
+			if (currentScreen != SCREEN_GAMESWITCHER && currentScreen != SCREEN_QUICKMENU && currentScreen != SCREEN_CONTEXTMENU) {
 				if(is_scrolling && pillanimdone && currentAnimQueueSize < 1 && total>0) {
 					int ow = GFX_blitHardwareGroup(screen, show_setting);
 					Entry* entry = top->entries->items[top->selected];

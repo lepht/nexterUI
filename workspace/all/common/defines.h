@@ -23,12 +23,14 @@
 #define BIN_PATH SYSTEM_PATH "/bin"
 #define TOOLS_PATH SDCARD_PATH "/Tools/" PLATFORM
 #define RECENT_PATH SHARED_USERDATA_PATH "/.minui/recent.txt"
+#define FAVORITES_PATH SHARED_USERDATA_PATH "/.minui/favorites.txt"
 #define SIMPLE_MODE_PATH SHARED_USERDATA_PATH "/enable-simple-mode"
 #define AUTO_RESUME_PATH SHARED_USERDATA_PATH "/.minui/auto_resume.txt"
 #define AUTO_RESUME_SLOT 9
 #define GAME_SWITCHER_PERSIST_PATH SHARED_USERDATA_PATH "/.minui/game_switcher.txt"
 
 #define FAUX_RECENT_PATH SDCARD_PATH "/Recently Played"
+#define FAUX_FAVORITES_PATH SDCARD_PATH "/Favorites"
 #define COLLECTIONS_PATH SDCARD_PATH "/Collections"
 
 #define LAST_PATH "/tmp/last.txt" // transient

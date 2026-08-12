@@ -461,6 +461,10 @@ int main(int argc, char *argv[])
             []() -> std::any { return CFG_getShowRecents(); },
             [](const std::any &value) { CFG_setShowRecents(std::any_cast<bool>(value)); },
             []() { CFG_setShowRecents(CFG_DEFAULT_SHOWRECENTS);}});
+        appearanceItems.push_back(new MenuItem{ListItemType::Generic, "Show Favorites", "Show \"Favorites\" menu entry in game list.", {false, true}, on_off,
+            []() -> std::any { return CFG_getShowFavorites(); },
+            [](const std::any &value) { CFG_setShowFavorites(std::any_cast<bool>(value)); },
+            []() { CFG_setShowFavorites(CFG_DEFAULT_SHOWFAVORITES);}});
         appearanceItems.push_back(new MenuItem{ListItemType::Generic, "Show Tools", "Show \"Tools\" menu entry in game list.", {false, true}, on_off,
             []() -> std::any { return CFG_getShowTools(); },
             [](const std::any &value) { CFG_setShowTools(std::any_cast<bool>(value)); },

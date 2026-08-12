@@ -55,6 +55,7 @@ void CFG_defaults(NextUISettings *cfg)
         .showMenuAnimations = CFG_DEFAULT_SHOWMENUANIMATIONS,
         .showMenuTransitions = CFG_DEFAULT_SHOWMENUTRANSITIONS,
         .showRecents = CFG_DEFAULT_SHOWRECENTS,
+        .showFavorites = CFG_DEFAULT_SHOWFAVORITES,
         .showTools = CFG_DEFAULT_SHOWTOOLS,
         .showCollections = CFG_DEFAULT_SHOWCOLLECTIONS,
         .showGameArt = CFG_DEFAULT_SHOWGAMEART,
@@ -268,6 +269,11 @@ void CFG_init(FontLoad_callback_t cb, ColorSet_callback_t ccb)
             if (sscanf(line, "recents=%i", &temp_value) == 1)
             {
                 CFG_setShowRecents((bool)temp_value);
+                continue;
+            }
+            if (sscanf(line, "favorites=%i", &temp_value) == 1)
+            {
+                CFG_setShowFavorites((bool)temp_value);
                 continue;
             }
             if (sscanf(line, "tools=%i", &temp_value) == 1)
@@ -817,6 +823,17 @@ bool CFG_getShowRecents(void)
 void CFG_setShowRecents(bool show)
 {
     settings.showRecents = show;
+    CFG_sync();
+}
+
+bool CFG_getShowFavorites(void)
+{
+    return settings.showFavorites;
+}
+
+void CFG_setShowFavorites(bool show)
+{
+    settings.showFavorites = show;
     CFG_sync();
 }
 
@@ -1385,6 +1402,10 @@ void CFG_get(const char *key, char *value)
     {
         sprintf(value, "%i", CFG_getShowRecents());
     }
+    else if (strcmp(key, "favorites") == 0)
+    {
+        sprintf(value, "%i", CFG_getShowFavorites());
+    }
     else if (strcmp(key, "tools") == 0)
     {
         sprintf(value, "%i", CFG_getShowTools());
@@ -1619,6 +1640,7 @@ void CFG_sync(void)
     fprintf(file, "menuanim=%i\n", settings.showMenuAnimations);
     fprintf(file, "menutransitions=%i\n", settings.showMenuTransitions);
     fprintf(file, "recents=%i\n", settings.showRecents);
+    fprintf(file, "favorites=%i\n", settings.showFavorites);
     fprintf(file, "tools=%i\n", settings.showTools);
 	fprintf(file, "collections=%i\n", settings.showCollections);
     fprintf(file, "gameart=%i\n", settings.showGameArt);
@@ -1693,6 +1715,7 @@ void CFG_print(void)
     printf("\t\"menuanim\": %i,\n", settings.showMenuAnimations);
     printf("\t\"menutransitions\": %i,\n", settings.showMenuTransitions);
     printf("\t\"recents\": %i,\n", settings.showRecents);
+    printf("\t\"favorites\": %i,\n", settings.showFavorites);
     printf("\t\"tools\": %i,\n", settings.showTools);
 	printf("\t\"collections\": %i,\n", settings.showCollections);
     printf("\t\"gameart\": %i,\n", settings.showGameArt);

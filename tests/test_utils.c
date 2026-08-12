@@ -157,6 +157,36 @@ static void test_names(void) {
 	getDisplayName("(USA).gb", out);
 	CHECK(out[0] != '\0', "never reduces a name to nothing");
 
+	// This is what stops a multi-disc game being favorited twice - once as the
+	// folder you browsed to, once as the m3u that comes back out of recents.
+	SECTION("canonicalGamePath");
+	CHECK(canonicalGamePath("/mnt/SDCARD/Roms/PS/Final Fantasy VII/Final Fantasy VII.m3u",
+			out, sizeof(out)), "reports success");
+	CHECK(strcmp(out, "/mnt/SDCARD/Roms/PS/Final Fantasy VII")==0,
+		"a folder's own m3u collapses to the folder");
+
+	canonicalGamePath("/mnt/SDCARD/Roms/PS/Final Fantasy VII/Final Fantasy VII.cue", out, sizeof(out));
+	CHECK(strcmp(out, "/mnt/SDCARD/Roms/PS/Final Fantasy VII")==0, "and so does its cue");
+
+	canonicalGamePath("/mnt/SDCARD/Roms/PS/Final Fantasy VII/Disc 1.m3u", out, sizeof(out));
+	CHECK(strcmp(out, "/mnt/SDCARD/Roms/PS/Final Fantasy VII/Disc 1.m3u")==0,
+		"an m3u that is not the folder's own keeps its own path");
+
+	canonicalGamePath("/mnt/SDCARD/Roms/Game Boy (GB)/Kirby.gb", out, sizeof(out));
+	CHECK(strcmp(out, "/mnt/SDCARD/Roms/Game Boy (GB)/Kirby.gb")==0, "an ordinary rom is untouched");
+
+	canonicalGamePath("bare.m3u", out, sizeof(out));
+	CHECK(strcmp(out, "bare.m3u")==0, "a path with no directory is untouched");
+
+	// long paths are reachable on a real card: deep folders plus full No-Intro
+	// names. Truncating here would key a favorite off the wrong string.
+	char longish[MAX_PATH];
+	memset(longish, 'a', sizeof(longish)-1);
+	longish[sizeof(longish)-1] = '\0';
+	char small_out[64];
+	CHECK(!canonicalGamePath(longish, small_out, sizeof(small_out)),
+		"refuses a path too long for the output buffer");
+
 	SECTION("trimSortingMeta");
 	char buf[64];
 	strcpy(buf, "001) Sonic the Hedgehog");
