@@ -18,7 +18,18 @@ endif
 ###########################################################
 
 BUILD_HASH:=$(shell git rev-parse --short HEAD)
-BUILD_BRANCH:=$(shell (git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD) | sed 's/\//-/g')
+# Actions checks a pull request out detached at a merge commit it invents, so
+# symbolic-ref finds nothing and the fallback names every PR artifact after a
+# sha that exists on no branch. Take the branch from the environment when CI
+# tells us what it is: GITHUB_HEAD_REF is the source branch of a pull request,
+# and GITHUB_REF_NAME the branch of a push (on a PR it is "<number>/merge",
+# which is why it cannot come first). Anything not allowed in a filename
+# becomes a dash - a slash always did, and git permits a few others.
+BUILD_BRANCH:=$(shell ( \
+		if [ -n "$$GITHUB_HEAD_REF" ]; then echo "$$GITHUB_HEAD_REF"; \
+		elif [ -n "$$GITHUB_REF_NAME" ]; then echo "$$GITHUB_REF_NAME"; \
+		else git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD; \
+		fi ) | sed 's/[^A-Za-z0-9._-]/-/g')
 RELEASE_TIME:=$(shell TZ=GMT date +%Y%m%d)
 ifeq ($(BUILD_BRANCH),main)
   RELEASE_BETA :=
