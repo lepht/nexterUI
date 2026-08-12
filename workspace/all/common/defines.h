@@ -34,6 +34,10 @@
 #define COLLECTIONS_PATH SDCARD_PATH "/Collections"
 
 #define LAST_PATH "/tmp/last.txt" // transient
+// the last search query, so reopening search offers it again. transient on
+// purpose: it should survive launching a game (which exits nextui) but not a
+// reboot, where a query from a previous session is just clutter
+#define SEARCH_QUERY_PATH "/tmp/search.txt"
 #define CHANGE_DISC_PATH "/tmp/change_disc.txt"
 #define RESUME_SLOT_PATH "/tmp/resume_slot.txt"
 #define NOUI_PATH "/tmp/noui"

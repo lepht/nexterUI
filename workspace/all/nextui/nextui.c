@@ -1813,6 +1813,7 @@ static void QuickMenu_quit(void) {
 	EntryArray_free(quickActions);
 }
 
+static void Search_init(void);
 static void Search_quit(void);
 
 static void Menu_init(void) {
@@ -1824,6 +1825,7 @@ static void Menu_init(void) {
 	loadLast(); // restore state when available
 
 	QuickMenu_init(); // needs Menu_init
+	Search_init();
 }
 static void Menu_quit(void) {
 	RecentArray_free(recents);
@@ -2594,6 +2596,8 @@ enum {
 static Array* search_index = NULL;   // EntryArray, owns its entries
 static Array* search_results = NULL; // borrowed pointers into search_index
 static char search_query[SEARCH_QUERY_MAX+1] = "";
+static int search_cursor = 0;        // insertion point in search_query, 0..strlen
+static int search_query_all = 0;     // query carried over from last time, selected: the next key typed replaces all of it
 static int search_selected = 0;
 static int search_start = 0;
 static int search_focus = SEARCH_FOCUS_KEYBOARD;
@@ -2752,26 +2756,56 @@ static void searchScrollTo(int selected) {
 
 static void openSearch(void) {
 	buildSearchIndex();
-	search_query[0] = '\0';
+	// Reopening starts on the last query rather than a blank field, selected whole
+	// the way a desktop text field is: it is either the search you want to run
+	// again, or the text you are about to type over, and both are one button away.
+	search_query_all = search_query[0]!='\0';
+	search_cursor = strlen(search_query);
 	search_focus = SEARCH_FOCUS_KEYBOARD;
 	search_key_row = 0;
 	search_key_col = 0;
-	updateSearchResults();
+	updateSearchResults(); // so the carried-over query already has its results
+}
+static void searchClear(void) {
+	search_query[0] = '\0';
+	search_cursor = 0;
+	search_query_all = 0;
 }
 static void searchAppend(char c) {
+	if (search_query_all) searchClear(); // typing replaces the selection, not appends to it
+
 	int len = strlen(search_query);
 	if (len>=SEARCH_QUERY_MAX) return;
 
-	search_query[len] = c;
-	search_query[len+1] = '\0';
+	memmove(search_query+search_cursor+1, search_query+search_cursor, len-search_cursor+1); // +1 for the terminator
+	search_query[search_cursor] = c;
+	search_cursor += 1;
 	updateSearchResults();
 }
 static void searchBackspace(void) {
-	int len = strlen(search_query);
-	if (len==0) return;
+	if (search_query_all) { // delete takes the whole selection, same as typing over it
+		searchClear();
+		updateSearchResults();
+		return;
+	}
+	if (search_cursor<=0) return;
 
-	search_query[len-1] = '\0';
+	int len = strlen(search_query);
+	memmove(search_query+search_cursor-1, search_query+search_cursor, len-search_cursor+1);
+	search_cursor -= 1;
 	updateSearchResults();
+}
+// Moving the cursor collapses the selection to the end it moved towards instead
+// of clearing the query - the text is kept, it just stops being selected.
+static void searchMoveCursor(int dir) {
+	int len = strlen(search_query);
+	if (search_query_all) {
+		search_query_all = 0;
+		search_cursor = dir<0 ? 0 : len;
+		return;
+	}
+
+	search_cursor = clamp(search_cursor + dir, 0, len);
 }
 static Entry* searchSelectedEntry(void) {
 	if (!search_results || search_selected<0 || search_selected>=search_results->count) return NULL;
@@ -2786,7 +2820,21 @@ static void searchReadyResume(void) {
 		has_preview = 0;
 	}
 }
+// The index is rebuilt per launch, but the query outlives the process so that
+// searching, launching a game and coming back still offers the last search -
+// which is the whole point, since launching a game is what exits nextui.
+static void Search_init(void) {
+	if (!exists(SEARCH_QUERY_PATH)) return;
+
+	getFile(SEARCH_QUERY_PATH, search_query, sizeof(search_query));
+	for (char* c=search_query; *c; c++) {
+		if (*c<' ') { *c = '\0'; break; } // a stray newline would draw as a glyph in the pill
+	}
+	search_cursor = strlen(search_query);
+}
 static void Search_quit(void) {
+	putFile(SEARCH_QUERY_PATH, search_query);
+
 	if (search_results) Array_free(search_results);
 	if (search_index) EntryArray_free(search_index);
 	search_results = NULL;
@@ -2888,9 +2936,13 @@ static void drawSearch(int ow) {
 		SDL_Rect pill_rect = { SCALE1(PADDING), SCALE1(PADDING), pill_width, SCALE1(PILL_SIZE) };
 		GFX_blitPillLight(ASSET_WHITE_PILL, screen, &pill_rect);
 
-		// a caret so an empty query still reads as an input, not a label
+		// A caret, so an empty query still reads as an input and not a label. It is
+		// spliced into the string rather than blitted separately so it lands on a
+		// glyph boundary without measuring the text twice. A selected query shows no
+		// caret - the selection is the cursor, and it covers every character.
 		char query[SEARCH_QUERY_MAX+2];
-		snprintf(query, sizeof(query), "%s|", search_query);
+		if (search_query_all) snprintf(query, sizeof(query), "%s", search_query);
+		else snprintf(query, sizeof(query), "%.*s|%s", search_cursor, search_query, search_query+search_cursor);
 
 		char display_query[SEARCH_QUERY_MAX+2];
 		GFX_truncateText(font.large, query, display_query, pill_width - count_w, SCALE1(BUTTON_PADDING*2));
@@ -2901,7 +2953,33 @@ static void drawSearch(int ow) {
 			pill_width - SCALE1(BUTTON_PADDING*2) - count_w,
 			pill_rect.h
 		};
-		blitRowText(display_query, &text_rect, uintToColour(THEME_COLOR6_255));
+
+		// selection reuses the highlight the keyboard puts on the key under the
+		// cursor, so "this is about to be replaced" looks the same in both places
+		if (search_query_all) {
+			int query_w = 0;
+			int query_h = 0;
+			GFX_sizeText(font.large, display_query, SCALE1(FONT_LARGE), &query_w, &query_h);
+			if (query_w>text_rect.w) query_w = text_rect.w;
+
+			SDL_Rect highlight_rect = {
+				text_rect.x - SCALE1(2),
+				pill_rect.y + (pill_rect.h - query_h - SCALE1(BUTTON_MARGIN)) / 2,
+				query_w + SCALE1(4),
+				query_h + SCALE1(BUTTON_MARGIN)
+			};
+
+			// the corners are drawn from the asset, so the rect cannot be smaller than
+			// the asset is - a one character query is narrow enough to reach that
+			SDL_Rect corner_rect;
+			GFX_assetRect(ASSET_STATE_BG, &corner_rect);
+			if (highlight_rect.w<corner_rect.w) highlight_rect.w = corner_rect.w;
+			if (highlight_rect.h<corner_rect.h) highlight_rect.h = corner_rect.h;
+
+			GFX_blitRectColor(ASSET_STATE_BG, screen, &highlight_rect, THEME_COLOR1);
+		}
+
+		blitRowText(display_query, &text_rect, uintToColour(search_query_all ? THEME_COLOR5_255 : THEME_COLOR6_255));
 
 		if (count_w) {
 			SDL_Rect count_rect = {
@@ -2970,8 +3048,17 @@ static void drawSearch(int ow) {
 			}
 		}
 
-		GFX_blitButtonGroup((char*[]){ "Y","SPACE", "X","DELETE", NULL }, 0, screen, 0);
-		GFX_blitButtonGroup((char*[]){ "B","BACK", "A","TYPE", NULL }, 1, screen, 1);
+		// a group fits two hints at most, so a carried-over query spends them on the
+		// choice it presents - run this again, or type over it - and the editing keys
+		// come back as soon as it stops being selected
+		if (search_query_all) {
+			GFX_blitButtonGroup((char*[]){ "START","SEARCH", NULL }, 0, screen, 0);
+			GFX_blitButtonGroup((char*[]){ "B","BACK", "A","REPLACE", NULL }, 1, screen, 1);
+		}
+		else {
+			GFX_blitButtonGroup((char*[]){ "Y","SPACE", "X","DELETE", NULL }, 0, screen, 0);
+			GFX_blitButtonGroup((char*[]){ "B","BACK", "A","TYPE", NULL }, 1, screen, 1);
+		}
 	}
 	else {
 		if (can_resume) GFX_blitButtonGroup((char*[]){ "X","RESUME", NULL }, 0, screen, 0);
@@ -3243,6 +3330,17 @@ int main (int argc, char *argv[]) {
 					folderbgchanged = 1;
 					dirty = 1;
 				}
+				else if (PAD_justPressed(BTN_START)) {
+					// run the query as it stands. the list is already filtered, so this is
+					// really "stop typing and go look at what it found"
+					search_query_all = 0;
+					if (results>0) {
+						search_focus = SEARCH_FOCUS_RESULTS;
+						searchScrollTo(search_selected);
+						searchReadyResume();
+					}
+					dirty = 1;
+				}
 				else if (PAD_justPressed(BTN_A)) {
 					searchAppend(search_keys[search_key_row][search_key_col]);
 					dirty = 1;
@@ -3253,6 +3351,14 @@ int main (int argc, char *argv[]) {
 				}
 				else if (PAD_justPressed(BTN_Y)) {
 					searchAppend(' ');
+					dirty = 1;
+				}
+				else if (PAD_justRepeated(BTN_L1) && !PAD_isPressed(BTN_R1)) {
+					searchMoveCursor(-1);
+					dirty = 1;
+				}
+				else if (PAD_justRepeated(BTN_R1) && !PAD_isPressed(BTN_L1)) {
+					searchMoveCursor(1);
 					dirty = 1;
 				}
 				else if (PAD_justRepeated(BTN_LEFT)) {
@@ -3275,6 +3381,7 @@ int main (int argc, char *argv[]) {
 					// the top row moves into them rather than wrapping around
 					if (search_key_row==0 && results>0) {
 						search_focus = SEARCH_FOCUS_RESULTS;
+						search_query_all = 0; // browsing the matches accepts the query, same as START
 						searchScrollTo(search_selected);
 						searchReadyResume();
 					}
