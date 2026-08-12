@@ -66,6 +66,7 @@ For other devices we recommend checking out [MinUI](https://github.com/shauninma
 - Battery Monitoring including history graph and time left prediction
 - Scrolling animated titles for longer game names
 - Favorites, added and removed from a context menu (Y) on any listed game
+- Global ROM search in the quick menu, with an on-screen keyboard and live results. Reopening it offers your last query, selected, so START runs it again and typing replaces it; L/R move the cursor within the text
 - Updated and optimized build emulation cores
 - Rumble strength fixed and is now variable as used by the games
 - FBNeo Arcade screen rotation
