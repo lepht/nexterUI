@@ -197,6 +197,22 @@ static void test_names(void) {
 	p = buf;
 	trimSortingMeta(&p);
 	CHECK(strcmp(p, "Sonic the Hedgehog")==0, "leaves a name without one alone");
+
+	// cleanName takes names as the game time db stores them - already without an
+	// extension - so a dot it finds belongs to the title, not to a suffix.
+	SECTION("cleanName");
+	cleanName(out, "Gun.Smoke");
+	CHECK(strcmp(out, "Gun.Smoke")==0, "keeps a dot that is part of the title");
+	cleanName(out, "Dr.Mario");
+	CHECK(strcmp(out, "Dr.Mario")==0, "keeps a dot with no space after it");
+	cleanName(out, "R.C. Pro-Am");
+	CHECK(strcmp(out, "R.C. Pro-Am")==0, "keeps a title with several dots");
+	cleanName(out, "001. Sonic the Hedgehog");
+	CHECK(strcmp(out, "Sonic the Hedgehog")==0, "still strips a numeric sorting prefix");
+	cleanName(out, "Some_Game_Name");
+	CHECK(strcmp(out, "Some Game Name")==0, "turns underscores into spaces");
+	cleanName(out, "Kirby's Dream Land (USA, Europe)");
+	CHECK(strcmp(out, "Kirby's Dream Land")==0, "still drops region parens");
 }
 
 ///////////////////////////////////////

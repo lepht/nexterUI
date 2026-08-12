@@ -288,8 +288,7 @@ bool canonicalGamePath(const char *path, char *out_path, size_t out_size) {
 }
 void cleanName(char *name_out, const char *file_name)
 {
-    char *name_without_ext = removeExtension(file_name);
-    char *no_underscores = replaceString2(name_without_ext, "_", " ");
+    char *no_underscores = replaceString2(file_name, "_", " ");
     char *dot_ptr = strstr(no_underscores, ".");
     if (dot_ptr != NULL) {
         char *s = no_underscores;
@@ -307,7 +306,6 @@ void cleanName(char *name_out, const char *file_name)
         dot_ptr = no_underscores;
     }
     removeParentheses(name_out, dot_ptr);
-    free(name_without_ext);
     free(no_underscores);
 }
 bool pathRelativeTo(char *path_out, const char *dir_from, const char *file_to)

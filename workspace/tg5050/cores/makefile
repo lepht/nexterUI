@@ -55,14 +55,16 @@ fbneo_MAKE = make
 fbneo_HASH = 6a5cc250c2db8d874a06ee86e302a2a78918b4c1
 
 # libretro/mgba removed Makefile.libretro in 8940477 (2026-08-04) when its CI moved
-# to cmake, which broke patches/mgba.patch and with it every build. Pin to the last
-# commit that still has the makefile until the patch is ported to cmake.
-mgba_HASH = 925f0f0bc1f51c79ca5446d7427512c653e615b3
+# to cmake. patches/mgba.patch existed only to add a tg5050 block to that makefile,
+# so it is gone and the cmake build carries the same flags directly.
+mgba_HASH = e31759b24e7a4e3899285ff720d7b573ac328ae7
+mgba_CORE = build-tg5050/mgba_libretro.so
+mgba_MAKE = cmake -S . -B build-tg5050 -DCMAKE_BUILD_TYPE=Release -DLIBMGBA_ONLY=ON -DBUILD_LIBRETRO=ON -DLIBRETRO_STATIC=OFF -DCMAKE_SYSTEM_NAME=Linux -DCMAKE_SYSTEM_PROCESSOR=aarch64 -DCMAKE_C_COMPILER=$(CROSS_COMPILE)gcc -DCMAKE_CXX_COMPILER=$(CROSS_COMPILE)g++ -DCMAKE_C_FLAGS="-fomit-frame-pointer -ffast-math -mcpu=cortex-a55 -fno-common -ftree-vectorize -funswitch-loops" -DCMAKE_CXX_FLAGS="-fomit-frame-pointer -ffast-math -mcpu=cortex-a55 -fno-common -ftree-vectorize -funswitch-loops" && cmake --build build-tg5050 --target mgba_libretro --
 
 # libretro-fceumm's Makefile.libretro drifted in 8ed0cb2 (2026-07-23, "Replace bundled
-# zlib with libretro-common's clean-room DEFLATE codec") and patches/fceumm.patch no
-# longer applies against it. Pin to the last commit it does apply to.
-fceumm_HASH = becde7dc48ad590e9c63ac9637dbaa01552beba3
+# zlib with libretro-common's clean-room DEFLATE codec"). patches/fceumm.patch is
+# rewritten for the post-drift file, so this pin has to sit after it, not before.
+fceumm_HASH = b5e3566515c27dc66c9c20572171673126532e06
 
 # Every core below is pinned to the upstream commit it was verified against, so a
 # build is reproducible and a third-party repo cannot break CI without a commit
