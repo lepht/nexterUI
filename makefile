@@ -54,7 +54,7 @@ PACKAGE_URL_MAPPINGS := \
 
 ###########################################################
 
-.PHONY: build
+.PHONY: build test
 
 export MAKEFLAGS=--no-print-directory
 
@@ -66,8 +66,12 @@ all: setup $(PLATFORMS) special package done
 shell:
 	make -f $(TOOLCHAIN_FILE) PLATFORM=$(PLATFORM)
 
-name: 
+name:
 	@echo $(RELEASE_NAME)
+
+# native, no toolchain and no device needed - see tests/makefile
+test:
+	cd tests && make
 
 build:
 	# ----------------------------------------------------

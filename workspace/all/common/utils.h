@@ -2,6 +2,7 @@
 #define UTILS_H
 
 #include <stddef.h>
+#include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -37,6 +38,11 @@ int exists(char* path);
 void touch(char* path);
 int toggle(char *path); // creates or removes file
 void putFile(char *path, char *contents);
+// Atomic rewrite: write via openAtomic, then commitAtomic renames the temp file
+// over `path`. A power cut leaves the old file intact rather than a truncated one.
+// commitAtomic always closes `file` and returns 0 on success.
+FILE* openAtomic(const char *path, char *tmp_path, size_t tmp_size);
+int commitAtomic(FILE *file, const char *path, const char *tmp_path);
 char* allocFile(char* path); // caller must free
 void getFile(char* path, char* buffer, size_t buffer_size);
 void putInt(char* path, int value);
