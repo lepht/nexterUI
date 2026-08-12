@@ -2571,7 +2571,11 @@ static void applyContextAction(void) {
 ///////////////////////////////////////
 
 #define SEARCH_QUERY_MAX 32
-#define SEARCH_INDEX_MAX 8192 // a card with more roms than this is not a search problem
+// An indexed entry measures about 200 bytes of heap (struct, path, display name),
+// so this ceiling is worth ~6.5MB - and only while the menu is up, since nextui
+// exits before a game launches. The ceiling is really a brake on how long the
+// first search waits for the card, not on memory.
+#define SEARCH_INDEX_MAX 32768
 #define SEARCH_MAX_DEPTH 4
 #define SEARCH_KEY_ROWS 4
 #define SEARCH_KEY_COLS 10
@@ -2593,6 +2597,7 @@ enum {
 
 static Array* search_index = NULL;   // EntryArray, owns its entries
 static Array* search_results = NULL; // borrowed pointers into search_index
+static int search_truncated = 0;     // index hit SEARCH_INDEX_MAX, results are partial
 static char search_query[SEARCH_QUERY_MAX+1] = "";
 static int search_selected = 0;
 static int search_start = 0;
@@ -2604,6 +2609,10 @@ static int search_key_col = 0;
 // map.txt aliases - but recursively, and treating a multi-disc folder as one game.
 static void addSearchEntries(Array* entries, char* path, int depth) {
 	if (depth>SEARCH_MAX_DEPTH) return;
+	if (entries->count>=SEARCH_INDEX_MAX) { // full, and every caller below wants to know
+		search_truncated = 1;
+		return;
+	}
 
 	DIR* dh = opendir(path);
 	if (!dh) return;
@@ -2634,7 +2643,10 @@ static void addSearchEntries(Array* entries, char* path, int depth) {
 	struct dirent* dp;
 	char full_path[256];
 	while ((dp = readdir(dh)) != NULL) {
-		if (entries->count>=SEARCH_INDEX_MAX) break;
+		if (entries->count>=SEARCH_INDEX_MAX) {
+			search_truncated = 1;
+			break;
+		}
 		if (hide(dp->d_name)) continue;
 
 		snprintf(full_path, sizeof(full_path), "%s/%s", path, dp->d_name);
@@ -2668,12 +2680,19 @@ static void buildSearchIndex(void) {
 	if (search_index) return;
 
 	search_index = Array_new();
+	search_truncated = 0;
 
 	DIR* dh = opendir(ROMS_PATH);
 	if (dh) {
 		struct dirent* dp;
 		char full_path[256];
 		while ((dp = readdir(dh)) != NULL) {
+			// stop the whole walk once full, rather than reopening every remaining
+			// system just to bail out of it again
+			if (search_index->count>=SEARCH_INDEX_MAX) {
+				search_truncated = 1;
+				break;
+			}
 			if (hide(dp->d_name)) continue;
 			if (!hasRoms(dp->d_name)) continue; // nothing to launch it with anyway
 
@@ -2682,6 +2701,9 @@ static void buildSearchIndex(void) {
 		}
 		closedir(dh);
 	}
+
+	if (search_truncated)
+		LOG_info("search index hit its %i entry ceiling, results will be partial\n", SEARCH_INDEX_MAX);
 
 	EntryArray_sort(search_index);
 
@@ -2791,6 +2813,7 @@ static void Search_quit(void) {
 	if (search_index) EntryArray_free(search_index);
 	search_results = NULL;
 	search_index = NULL;
+	search_truncated = 0;
 }
 
 ///////////////////////////////////////
@@ -2879,7 +2902,8 @@ static void drawSearch(int ow) {
 		int count_w = 0;
 		int count_h = 0;
 		if (search_query[0]) {
-			snprintf(count, sizeof(count), "%i", total);
+			// a trailing + means the index is capped, so this is a floor and not a total
+			snprintf(count, sizeof(count), "%i%s", total, search_truncated ? "+" : "");
 			GFX_sizeText(font.tiny, count, SCALE1(FONT_TINY), &count_w, &count_h);
 			count_w += SCALE1(BUTTON_MARGIN);
 		}
@@ -2917,8 +2941,13 @@ static void drawSearch(int ow) {
 	// results
 	int list_top = searchListTop();
 	if (total==0) {
+		// an empty result off a capped index is the one case where "no matches" would
+		// be a lie, so say which it is
+		char* message = "Type to search";
+		if (search_query[0]) message = search_truncated ? "No matches\nsome games are not indexed" : "No matches";
+
 		SDL_Rect message_rect = { 0, list_top, screen->w, rows * SCALE1(PILL_SIZE) };
-		GFX_blitMessage(font.large, search_query[0] ? "No matches" : "Type to search", screen, &message_rect);
+		GFX_blitMessage(font.large, message, screen, &message_rect);
 	}
 	else {
 		for (int i=search_start, j=0; i<total && j<rows; i++, j++) {
