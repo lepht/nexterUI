@@ -30,6 +30,23 @@ jobs:
         run: |
           echo "RELEASE_NAME=$(make name)" >> "$GITHUB_OUTPUT"
 
+  # Native, so no toolchain image and about a minute. Runs alongside the builds
+  # rather than gating them, so a red test reads on its own row.
+  unit-tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.0
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential pkg-config libsdl2-dev libsdl2-image-dev libsdl2-ttf-dev
+
+      - name: Run unit tests
+        run: make test
+
   core-matrix:
     runs-on: ubuntu-24.04-arm
     env:

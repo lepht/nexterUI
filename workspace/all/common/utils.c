@@ -493,9 +493,9 @@ char* allocFile(char* path) { // caller must free!
 }
 int getInt(char* path) {
 	int i = 0;
-    if(path == NULL)
-        return i;
-    
+	if(path == NULL)
+		return i;
+
 	FILE *file = fopen(path, "r");
 	if (file!=NULL) {
 		int res = fscanf(file, "%i", &i);
