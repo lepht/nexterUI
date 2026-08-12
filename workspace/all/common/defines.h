@@ -28,6 +28,9 @@
 #define AUTO_RESUME_PATH SHARED_USERDATA_PATH "/.minui/auto_resume.txt"
 #define AUTO_RESUME_SLOT 9
 #define GAME_SWITCHER_PERSIST_PATH SHARED_USERDATA_PATH "/.minui/game_switcher.txt"
+// presence turns on BENCH logging - a file rather than only an env var, so a
+// device can be measured without editing its launch script or reflashing
+#define BENCH_PATH SHARED_USERDATA_PATH "/.minui/bench"
 
 #define FAUX_RECENT_PATH SDCARD_PATH "/Recently Played"
 #define FAUX_FAVORITES_PATH SDCARD_PATH "/Favorites"
